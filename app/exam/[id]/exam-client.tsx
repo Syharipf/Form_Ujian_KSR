@@ -6,6 +6,7 @@ import { PendingLabel } from '@/app/pending'
 import ThemeToggle from '@/app/theme-toggle'
 import { GRACE_MS, type ExamView, type PublicQuestion } from '@/lib/exam'
 import { enterFullscreen, exitFullscreen, isFullscreen, subscribeFullscreen } from '@/lib/fullscreen'
+import Confetti from './confetti'
 import { useAntiCheat } from './use-anti-cheat'
 import Watermark from './watermark'
 
@@ -283,19 +284,27 @@ export default function ExamClient({ id }: { id: string }) {
   )
 }
 
+const cheer = (score: number) => (score >= 80 ? 'Luar biasa!' : score >= 60 ? 'Kerja bagus!' : 'Terima kasih sudah berjuang!')
+
 function Submitted({ view }: Readonly<{ view: ExamView }>) {
+  // The only way to reach the limit is the auto-submit, so no party for that.
+  const celebrate = view.violation_count < view.max_violations
   if (view.score === undefined) {
     return (
       <Notice
-        title="Jawaban terkirim"
-        body="Nilai akan muncul di halaman ini setelah panitia menutup sesi dan semua peserta selesai. Biarkan halaman ini terbuka, atau buka lagi QR/link ujian nanti."
-      />
+        title={celebrate ? 'Selamat, kamu sudah selesai! 🎉' : 'Ujian dikumpulkan otomatis'}
+        body="Jawaban terkirim. Nilai akan muncul di halaman ini setelah panitia menutup sesi dan semua peserta selesai. Biarkan halaman ini terbuka, atau buka lagi QR/link ujian nanti."
+      >
+        {celebrate && <Confetti />}
+      </Notice>
     )
   }
   return (
     <Notice title={view.title} body={`${view.name} · ${view.nim}`}>
+      {celebrate && <Confetti key="score" /> /* new key: replay the burst when the score arrives */}
       <p className="mt-4 text-sm text-muted">Nilaimu</p>
-      <p className="text-6xl font-bold">{view.score}</p>
+      <p className="pop-in text-6xl font-bold">{view.score}</p>
+      {celebrate && <p className="pop-in mt-2 text-lg font-semibold text-danger [animation-delay:300ms]">🎉 {cheer(view.score)}</p>}
     </Notice>
   )
 }
