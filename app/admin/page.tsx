@@ -18,42 +18,41 @@ export default async function AdminHome() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl space-y-8 p-4">
-      <header className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Admin UjiKSR</h1>
+    <main className="mx-auto max-w-4xl space-y-8 p-4 pb-12">
+      <header className="flex items-center justify-between gap-3 pt-2">
+        <h1 className="text-2xl font-extrabold tracking-tight">Sesi ujian</h1>
         <form action={logout}>
-          <SubmitButton className="text-sm underline">Keluar</SubmitButton>
+          <SubmitButton className="btn btn-secondary text-sm">Keluar</SubmitButton>
         </form>
       </header>
 
-      <section>
-        <h2 className="mb-2 font-semibold">Sesi ujian</h2>
-        <ul className="divide-y divide-line rounded border border-line bg-surface">
+      <section className="space-y-3">
+        <ul className="card divide-y divide-line overflow-hidden">
           {sessions.map((s) => (
             <li key={s.id}>
-              <Link href={`/admin/sessions/${s.id}`} className="flex items-center justify-between gap-3 p-3 hover:bg-page">
-                <span>
-                  {s.title}{' '}
+              <Link href={`/admin/sessions/${s.id}`} className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-subtle">
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold">{s.title}</span>
                   <span className="text-sm text-muted">
-                    ({formatDate(s.held_on)} · {s.kind === 'pre' ? 'Pre' : 'Post'} · {s.code})
+                    {formatDate(s.held_on)} · {s.kind === 'pre' ? 'Pre-test' : 'Post-test'} · kode <code className="font-semibold">{s.code}</code>
                   </span>
                 </span>
-                <span className="flex items-center gap-1">
-                  <span className={`text-sm ${s.is_open ? 'text-ok' : 'text-muted'}`}>{s.is_open ? 'Dibuka' : 'Ditutup'}</span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className={`badge ${s.is_open ? 'bg-ok-soft text-ok' : 'bg-subtle text-muted'}`}>{s.is_open ? 'Dibuka' : 'Ditutup'}</span>
                   <LinkPending />
                 </span>
               </Link>
             </li>
           ))}
-          {!sessions.length && <li className="p-3 text-muted">Belum ada sesi.</li>}
+          {!sessions.length && <li className="p-6 text-center text-muted">Belum ada sesi. Buat sesi pertama di bawah.</li>}
         </ul>
-        <Link href="/admin/compare" className="mt-2 inline-block text-sm underline">
-          Bandingkan pre-test vs post-test → <LinkPending />
+        <Link href="/admin/compare" className="btn btn-secondary text-sm">
+          Bandingkan pre-test vs post-test <LinkPending />
         </Link>
       </section>
 
-      <section className="rounded border border-line bg-surface p-4">
-        <h2 className="mb-3 font-semibold">Buat sesi baru</h2>
+      <section className="card p-4 sm:p-6">
+        <h2 className="mb-4 text-lg font-bold">Buat sesi baru</h2>
         <SessionForm action={createSession} submitLabel="Buat sesi" />
       </section>
     </main>

@@ -7,6 +7,7 @@ import { requireAdmin } from '@/lib/admin-auth'
 import { COOKIE, makeToken, passwordMatches, TTL_MS } from '@/lib/admin-token'
 import { parseQuestionsCsv, toQuestion } from '@/lib/csv'
 import { db, must } from '@/lib/db'
+import type { Session } from '@/lib/exam'
 
 const back = (id: string, msg: string) => redirect(`/admin/sessions/${id}?msg=${encodeURIComponent(msg)}`)
 
@@ -72,7 +73,14 @@ export async function createSession(formData: FormData) {
 
 export async function updateSession(id: string, formData: FormData) {
   await requireAdmin()
-  must(await db().from('exam_sessions').update(sessionFields(formData)).eq('id', id))
+  const fields = sessionFields(formData)
+  // Running attempts were timed with the current settings (deadlines, per-question order);
+  // changing them underneath would move deadlines or let per-question takers go back.
+  if (await hasAttempts(id)) {
+    const current: Pick<Session, TimerField> = must(await db().from('exam_sessions').select(TIMER_FIELDS.join(',')).eq('id', id).single())
+    if (TIMER_FIELDS.some((key) => fields[key] !== current[key])) return back(id, TIMER_LOCKED)
+  }
+  must(await db().from('exam_sessions').update(fields).eq('id', id))
   back(id, 'Pengaturan tersimpan')
 }
 
@@ -96,6 +104,9 @@ async function hasAttempts(sessionId: string) {
   return Boolean(count)
 }
 const LOCKED = 'Sudah ada peserta. Reset semua peserta dulu sebelum mengubah soal.'
+const TIMER_FIELDS = ['timer_mode', 'duration_sec', 'per_question_sec'] as const
+type TimerField = (typeof TIMER_FIELDS)[number]
+const TIMER_LOCKED = 'Pengaturan belum tersimpan — timer terkunci karena sudah ada peserta. Reset semua peserta dulu untuk mengubah timer.'
 
 export async function uploadQuestions(id: string, formData: FormData) {
   await requireAdmin()

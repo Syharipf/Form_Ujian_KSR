@@ -63,6 +63,7 @@ export interface PublicQuestion {
 
 export interface ExamView {
   status: 'active' | 'submitted'
+  submit_reason: SubmitReason | null
   title: string
   name: string
   nim: string
@@ -172,6 +173,7 @@ export function buildView(a: Attempt, s: Session, questions: Record<string, Ques
   }
   return {
     status: submitted ? 'submitted' : 'active',
+    submit_reason: a.submit_reason,
     title: s.title,
     name: a.name,
     nim: a.nim,

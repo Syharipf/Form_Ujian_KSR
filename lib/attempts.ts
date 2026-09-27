@@ -89,5 +89,5 @@ export async function finalizeExpired(sessionId: string) {
   const stale: { id: string }[] = must(
     await db().from('attempts').select('id').eq('session_id', sessionId).is('submitted_at', null).lt('deadline_at', cutoff),
   )
-  for (const { id } of stale) await sync(await loadCtx(id), new Date())
+  await Promise.all(stale.map(async ({ id }) => sync(await loadCtx(id), new Date())))
 }
