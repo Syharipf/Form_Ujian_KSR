@@ -80,6 +80,15 @@ try {
   // --- total mode ---------------------------------------------------------
   const pre = await createSession(adminPage, 'Pre-test E2E', 'pre', 'total')
 
+  // Share-screen view: the code and QR only, never the answer key the session page shows.
+  const display = await adminPage.context().newPage()
+  await display.goto(`${pre.url}/qr`)
+  await display.getByText(pre.code, { exact: true }).waitFor()
+  assert.ok(await display.locator('img[alt^="QR http"]').isVisible())
+  assert.equal(await display.getByText('✓').count(), 0)
+  await display.close()
+  log('QR display page shows the code and QR without the answer key')
+
   const a = await participant(browser, pre.code, 'Ani', '1001')
   assert.equal(await a.page.evaluate(() => document.fullscreenElement !== null), true)
   log('participant enters fullscreen on start')

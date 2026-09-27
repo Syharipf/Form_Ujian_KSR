@@ -1,7 +1,7 @@
 import { db, must } from './db'
 import { buildView, ExamError, grade, GRACE_MS, settle, type Attempt, type Question, type ResultsStatus, type Session, type SubmitReason } from './exam'
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export interface Ctx {
   attempt: Attempt

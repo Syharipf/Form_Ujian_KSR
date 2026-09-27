@@ -17,6 +17,15 @@ export function AutoRefresh() {
   return null
 }
 
+// Projector view: fill the screen. The button's wrapper hides once fullscreen (globals.css).
+export function FullscreenButton() {
+  return (
+    <button type="button" onClick={() => document.documentElement.requestFullscreen?.().catch(() => {})} className="btn btn-secondary text-sm whitespace-nowrap">
+      Layar penuh
+    </button>
+  )
+}
+
 // Ticks down to `until` on the server's clock (the admin's device clock may be off).
 export function Countdown({ until, serverNow }: Readonly<{ until: number; serverNow: number }>) {
   const [left, setLeft] = useState(until - serverNow)

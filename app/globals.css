@@ -237,6 +237,11 @@ body {
   }
 }
 
+/* app/admin/sessions/[id]/qr: its controls disappear once the view fills the screen. */
+:fullscreen .hide-in-fullscreen {
+  display: none;
+}
+
 /* Exam page: no text selection, no long-press menu (copy / "Search with Google Lens"). */
 .no-select {
   -webkit-user-select: none;

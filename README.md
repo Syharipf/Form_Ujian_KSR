@@ -51,11 +51,16 @@
 **Untuk panitia** (`/admin`)
 - Buat sesi pre-test/post-test lengkap dengan tanggal, mode timer, dan batas pelanggaran.
 - Soal lewat form manual atau upload CSV dari Excel/Google Sheets.
-- QR dan link sesi siap ditayangkan; sesi dibuka/ditutup dengan satu klik.
+- Halaman **Tayangkan QR & kode** untuk share screen atau proyektor: QR dan kode sesi dalam ukuran besar, tanpa daftar soal dan kunci jawaban. Sesi dibuka/ditutup dengan satu klik.
 - Pantau peserta secara langsung: nilai, status, dan log pelanggaran lengkap dengan jam. Halaman memperbarui diri tiap 10 detik.
 - Hitung mundur sampai nilai tampil di HP peserta.
 - Export hasil ke CSV, reset peserta, hapus sesi.
 - Bandingkan pre-test vs post-test per peserta (dicocokkan lewat NIM) beserta rata-rata peningkatannya.
+
+<p align="center">
+  <img src="docs/img/admin-qr-display.webp" width="700" alt="Halaman Tayangkan QR & kode untuk share screen atau proyektor"><br>
+  <sub>Tayangkan QR & kode: aman di-share screen, tanpa kunci jawaban</sub>
+</p>
 
 <p align="center">
   <img src="docs/img/admin-participants.webp" width="700" alt="Tabel peserta dengan status dan log pelanggaran">
