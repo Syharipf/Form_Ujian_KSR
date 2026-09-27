@@ -70,12 +70,21 @@ const ids = joins.filter((r) => r.ok).map((r) => r.data.id)
 const opens = await Promise.all(ids.map((id) => api(`/api/attempts/${id}`)))
 report('open exam', opens)
 
-// Everyone answers every question (one request at a time each, like the exam page's queue).
+// Everyone answers every question, one request at a time each like the exam page's queue. Total mode
+// lists all questions at once; per-question mode shows the next one in each answer's response.
 const answers: Result[] = []
 await Promise.all(
   opens.map(async (open, i) => {
-    for (const [j, q] of (open.data.questions ?? []).entries()) {
-      answers.push(await api(`/api/attempts/${ids[i]}/answer`, { question_id: q.id, choice: (i + j) % q.options.length }))
+    const done = new Set<string>()
+    let view = open.data
+    while (view.status === 'active') {
+      const q = view.questions?.find((x) => !done.has(x.id))
+      if (!q) break
+      done.add(q.id)
+      const res = await api(`/api/attempts/${ids[i]}/answer`, { question_id: q.id, choice: (i + done.size) % q.options.length })
+      answers.push(res)
+      if (!res.ok) break
+      view = res.data
     }
   }),
 )
