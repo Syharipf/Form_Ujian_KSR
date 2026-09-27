@@ -8,6 +8,7 @@ export interface Session {
   id: string
   code: string
   title: string
+  held_on: string // YYYY-MM-DD
   kind: 'pre' | 'post'
   timer_mode: TimerMode
   duration_sec: number
@@ -15,6 +16,9 @@ export interface Session {
   max_violations: number
   is_open: boolean
 }
+
+// '2026-09-27' → '27 Sep 2026'. A bare date parses as UTC midnight, so format in UTC.
+export const formatDate = (ymd: string) => new Date(ymd).toLocaleDateString('id-ID', { dateStyle: 'medium', timeZone: 'UTC' })
 
 export interface Question {
   id: string

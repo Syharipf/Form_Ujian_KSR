@@ -5,8 +5,8 @@ import QRCode from 'qrcode'
 import { requireAdmin } from '@/lib/admin-auth'
 import { finalizeExpired } from '@/lib/attempts'
 import { db, must } from '@/lib/db'
-import type { Attempt, Question, Session } from '@/lib/exam'
-import { deleteQuestion, resetAllAttempts, resetAttempt, saveQuestion, setOpen, updateSession, uploadQuestions } from '../../actions'
+import { formatDate, type Attempt, type Question, type Session } from '@/lib/exam'
+import { deleteQuestion, deleteSession, resetAllAttempts, resetAttempt, saveQuestion, setOpen, updateSession, uploadQuestions } from '../../actions'
 import LinkPending from '@/app/link-pending'
 import SubmitButton from '@/app/submit-button'
 import QuestionForm from '../../question-form'
@@ -72,7 +72,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
         </Link>
         <h1 className="mt-1 text-xl font-bold">{session.title}</h1>
         <p className="text-sm text-muted">
-          {session.kind === 'pre' ? 'Pre-test' : 'Post-test'} · kode {session.code}
+          {formatDate(session.held_on)} · {session.kind === 'pre' ? 'Pre-test' : 'Post-test'} · kode {session.code}
         </p>
       </header>
 
@@ -174,6 +174,14 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
       <section className="rounded border border-line bg-surface p-4">
         <h2 className="mb-3 font-semibold">Pengaturan</h2>
         <SessionForm action={updateSession.bind(null, id)} session={session} submitLabel="Simpan pengaturan" />
+        <form action={deleteSession.bind(null, id)} className="mt-4 border-t border-line pt-4">
+          <SubmitButton
+            confirm={`Hapus sesi "${session.title}" beserta ${questions.length} soal dan ${attempts.length} peserta? Tidak bisa dibatalkan.`}
+            className="rounded border border-danger-line bg-surface px-3 py-1.5 text-sm text-danger"
+          >
+            Hapus sesi
+          </SubmitButton>
+        </form>
       </section>
 
       <section className="space-y-3">

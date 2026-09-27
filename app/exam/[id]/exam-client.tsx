@@ -6,6 +6,7 @@ import { PendingLabel } from '@/app/pending'
 import ThemeToggle from '@/app/theme-toggle'
 import { GRACE_MS, type ExamView, type PublicQuestion } from '@/lib/exam'
 import { enterFullscreen, exitFullscreen, isFullscreen, subscribeFullscreen } from '@/lib/fullscreen'
+import Confetti from './confetti'
 import { useAntiCheat } from './use-anti-cheat'
 import Watermark from './watermark'
 
@@ -300,20 +301,28 @@ export default function ExamClient({ id }: { id: string }) {
   )
 }
 
+const cheer = (score: number) => (score >= 80 ? 'Luar biasa!' : score >= 60 ? 'Kerja bagus!' : 'Terima kasih sudah berjuang!')
+
 function Submitted({ view, serverNow }: Readonly<{ view: ExamView; serverNow: number }>) {
+  // The only way to reach the limit is the auto-submit, so no party for that.
+  const celebrate = view.violation_count < view.max_violations
+  const title = celebrate ? 'Selamat, kamu sudah selesai! 🎉' : 'Ujian dikumpulkan otomatis'
   // ms until scores are released for everyone (null while the session is still open)
   const resultsIn = view.results_at === null ? null : Math.max(0, view.results_at - serverNow)
   if (view.score === undefined && resultsIn === null) {
     return (
       <Notice
-        title="Jawaban terkirim"
-        body="Nilai akan muncul di halaman ini setelah panitia menutup sesi dan semua peserta selesai. Biarkan halaman ini terbuka, atau buka lagi QR/link ujian nanti."
-      />
+        title={title}
+        body="Jawaban terkirim. Nilai akan muncul di halaman ini setelah panitia menutup sesi dan semua peserta selesai. Biarkan halaman ini terbuka, atau buka lagi QR/link ujian nanti."
+      >
+        {celebrate && <Confetti />}
+      </Notice>
     )
   }
   if (view.score === undefined) {
     return (
-      <Notice title="Jawaban terkirim" body="Nilai semua peserta muncul serentak dalam">
+      <Notice title={title} body="Jawaban terkirim. Nilai semua peserta muncul serentak dalam">
+        {celebrate && <Confetti />}
         <p className="font-mono text-5xl font-bold" aria-live="polite">
           {clock(resultsIn ?? 0)}
         </p>
@@ -325,8 +334,10 @@ function Submitted({ view, serverNow }: Readonly<{ view: ExamView; serverNow: nu
   }
   return (
     <Notice title={view.title} body={`${view.name} · ${view.nim}`}>
+      {celebrate && <Confetti key="score" /> /* new key: replay the burst when the score arrives */}
       <p className="mt-4 text-sm text-muted">Nilaimu</p>
-      <p className="text-6xl font-bold">{view.score}</p>
+      <p className="pop-in text-6xl font-bold">{view.score}</p>
+      {celebrate && <p className="pop-in mt-2 text-lg font-semibold text-danger [animation-delay:300ms]">🎉 {cheer(view.score)}</p>}
     </Notice>
   )
 }

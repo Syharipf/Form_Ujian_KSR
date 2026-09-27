@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Anti-cheat pre-test/post-test exam web app for KSR PMI Telkom. Participants open a session by QR/link on Android Chrome (no login: name + NIM); committee uses `/admin`. Design spec: `docs/superpowers/specs/2026-09-27-ujian-ksr-anticheat-design.md`. UI copy is Indonesian.
+Anti-cheat pre-test/post-test exam web app (UjiKSR) for KSR PMI Universitas Telkom. Participants open a session by QR/link on Android Chrome (no login: name + NIM); committee uses `/admin`. Design spec: `docs/superpowers/specs/2026-09-27-ujian-ksr-anticheat-design.md`. UI copy is Indonesian.
 
 Stack: Next.js 16 App Router (Turbopack) + Supabase Postgres, run with **Bun** (`node` on this machine is a Bun symlink). Tailwind v4.
 

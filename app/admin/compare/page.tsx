@@ -5,7 +5,7 @@ import SubmitButton from '@/app/submit-button'
 import { requireAdmin } from '@/lib/admin-auth'
 import { finalizeExpired } from '@/lib/attempts'
 import { db, must } from '@/lib/db'
-import type { Session } from '@/lib/exam'
+import { formatDate, type Session } from '@/lib/exam'
 import { compareScores, type ScoreRow } from '@/lib/report'
 
 async function scores(sessionId: string): Promise<ScoreRow[]> {
@@ -18,7 +18,7 @@ const show = (n: number | null) => (n === null ? '–' : n)
 export default async function ComparePage(props: PageProps<'/admin/compare'>) {
   await requireAdmin()
   const { pre, post } = await props.searchParams
-  const sessions: Session[] = must(await db().from('exam_sessions').select('*').order('created_at', { ascending: false }))
+  const sessions: Session[] = must(await db().from('exam_sessions').select('*').order('held_on', { ascending: false }).order('created_at', { ascending: false }))
   const known = (v: unknown): v is string => typeof v === 'string' && sessions.some((s) => s.id === v)
   const result = known(pre) && known(post) ? compareScores(await scores(pre), await scores(post)) : null
 
@@ -33,7 +33,7 @@ export default async function ComparePage(props: PageProps<'/admin/compare'>) {
           .filter((s) => s.kind === name)
           .map((s) => (
             <option key={s.id} value={s.id}>
-              {s.title} ({s.code})
+              {s.title} ({formatDate(s.held_on)} · {s.code})
             </option>
           ))}
       </select>

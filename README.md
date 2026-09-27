@@ -1,6 +1,6 @@
-# Ujian KSR PMI Telkom
+# UjiKSR
 
-Web ujian pre-test / post-test dengan anti-cheat untuk HP Android. Peserta masuk lewat scan QR, panitia mengelola semuanya di `/admin`.
+Web ujian KSR PMI Universitas Telkom: pre-test / post-test dengan anti-cheat untuk HP Android. Peserta masuk lewat scan QR, panitia mengelola semuanya di `/admin`.
 
 ## Setup (sekali saja)
 

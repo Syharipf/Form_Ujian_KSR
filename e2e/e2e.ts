@@ -94,8 +94,10 @@ try {
   await a.page.getByText('4 dari 4 soal terjawab').waitFor()
   await a.page.getByRole('button', { name: 'Kumpulkan', exact: true }).click()
   await a.page.getByText('Jawaban terkirim').waitFor()
+  await a.page.getByText('Selamat, kamu sudah selesai!').waitFor()
+  assert.ok((await a.page.locator('.confetti').count()) > 0)
   assert.ok(a.views.length > 0 && a.views.every((v) => !v.includes('answer_index') && !v.includes('"score"')))
-  log('total mode: answer all, confirm, submit; API never sent answer key or score')
+  log('total mode: answer all, confirm, submit, celebration shown; API never sent answer key or score')
 
   // violations → auto-submit
   const b = await participant(browser, pre.code, '=HYPERLINK("http://x")', '1002')
@@ -113,7 +115,9 @@ try {
     window.dispatchEvent(new Event('blur'))
   })
   await b.page.getByText('Jawaban terkirim').waitFor()
-  log('violations 1-2 show warning overlay, 3rd auto-submits')
+  await b.page.getByText('Ujian dikumpulkan otomatis').waitFor()
+  assert.equal(await b.page.locator('.confetti').count(), 0)
+  log('violations 1-2 show warning overlay, 3rd auto-submits (no celebration)')
 
   // reopen counts as violation
   const c = await participant(browser, pre.code, 'Cici', '1003')
@@ -221,6 +225,8 @@ try {
   const [aniAt, budiAt] = await Promise.all([shown(p.page), shown(late.page)])
   assert.ok(Math.abs(aniAt - budiAt) < 4000, `scores appeared ${Math.abs(aniAt - budiAt)} ms apart`)
   assert.equal(await p.page.locator('main p.text-6xl').innerText(), '75')
+  await p.page.getByText('Kerja bagus!').waitFor()
+  assert.ok((await p.page.locator('.confetti').count()) > 0)
   await adminPage.reload()
   await adminPage.getByText('Nilai sudah terlihat oleh peserta').waitFor()
   log('when the countdown ends, every participant sees their score at about the same time')
@@ -300,6 +306,20 @@ try {
   assert.equal(await theme(), 'system')
   assert.equal(await surface(), lightBg)
   log('theme toggle switches to dark, survives reload, and returns to following the device')
+
+  // --- session date + delete ----------------------------------------------------
+  await adminPage.goto(`${BASE}/admin`)
+  await adminPage.fill('input[name=title]', 'Sesi Hapus E2E')
+  await adminPage.fill('input[name=held_on]', '2026-10-05')
+  await adminPage.getByRole('button', { name: 'Buat sesi', exact: true }).click()
+  await adminPage.waitForURL(/\/admin\/sessions\//)
+  await adminPage.getByText(/5 Okt 2026 · Pre-test/).waitFor()
+  adminPage.once('dialog', (d) => d.accept())
+  await adminPage.getByRole('button', { name: 'Hapus sesi', exact: true }).click()
+  await adminPage.waitForURL(`${BASE}/admin`)
+  await adminPage.getByText('Sesi Hapus E2E').waitFor({ state: 'detached' }) // URL changes before the new list renders
+  assert.ok(await adminPage.getByText('Pre-test E2E').isVisible())
+  log('session date is saved and shown; deleting a session removes it from the list')
 
   // --- pending feedback ------------------------------------------------------------
   // Slow the server down so the delayed spinner has time to appear.

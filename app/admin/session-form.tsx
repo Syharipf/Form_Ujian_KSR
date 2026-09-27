@@ -18,6 +18,17 @@ export default function SessionForm({
         Judul
         <input name="title" required maxLength={120} defaultValue={session?.title} placeholder="Pre-test Diklat KSR 2026" className={input} />
       </label>
+      <label className="grid gap-1 sm:col-span-2">
+        Tanggal sesi
+        {/* sv-SE formats as YYYY-MM-DD, the value <input type="date"> expects */}
+        <input
+          type="date"
+          name="held_on"
+          required
+          defaultValue={session?.held_on ?? new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' })}
+          className={input}
+        />
+      </label>
       <label className="grid gap-1">
         Jenis
         <select name="kind" defaultValue={session?.kind ?? 'pre'} className={input}>

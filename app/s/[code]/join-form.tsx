@@ -69,7 +69,7 @@ export default function JoinForm({ session }: Props) {
     <main className="mx-auto max-w-md space-y-5 p-5">
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-danger">KSR PMI Telkom · {session.kind === 'pre' ? 'Pre-test' : 'Post-test'}</p>
+          <p className="text-sm font-semibold text-danger">UjiKSR · {session.kind === 'pre' ? 'Pre-test' : 'Post-test'}</p>
           <h1 className="text-2xl font-bold">{session.title}</h1>
         </div>
         <ThemeToggle />
