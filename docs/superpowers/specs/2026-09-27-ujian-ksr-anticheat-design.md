@@ -44,7 +44,7 @@ Lapisan anti-cheat:
   - `option_orders`: `{question_id: [indeks opsi asli sesuai urutan tampil]}`. Soal `tf` tidak diacak opsinya (Benar selalu di atas).
   - `answers`: `{question_id: indeks opsi asli}`. Client mengirim indeks tampil; server memetakan ke indeks asli.
   - `score`: 0–100, dibulatkan ke bilangan bulat.
-- `violations`: id, attempt_id, type, detail, created_at.
+- `violations`: id, attempt_id, type, created_at.
 
 ### Akses via QR / link
 - Tiap sesi punya link `https://<domain>/s/<CODE>`; admin menampilkan QR-nya (lib `qrcode`) untuk ditayangkan/dicetak.
@@ -78,6 +78,6 @@ supabase/schema.sql
 ```
 
 ## Pengujian
-- `lib/exam.test.ts` (vitest): mapping acak opsi → nilai benar, deadline total & per soal, auto-submit di pelanggaran ke-3.
+- `lib/exam.test.ts` (`bun test`): mapping acak opsi → nilai benar, deadline total & per soal, auto-submit di pelanggaran ke-3.
 - Manual desktop: `npm run dev`, buat sesi, upload CSV contoh, kerjakan di browser, pindah tab 3× → auto-submit, cek hasil + export + halaman bandingkan.
 - Manual HP Android (Chrome, via Vercel preview): scan QR → masuk sesi; uji pindah aplikasi, tarik notifikasi, split screen, keluar fullscreen, tekan lama teks, Circle to Search — catat mana yang terdeteksi.
