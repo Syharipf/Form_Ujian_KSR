@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { parseQuestionsCsv } from './csv'
+import { parseQuestionsCsv, toQuestion } from './csv'
 
 describe('parseQuestionsCsv', () => {
   it('parses mc and tf rows', () => {
@@ -39,5 +39,31 @@ describe('parseQuestionsCsv', () => {
       'Baris 5: question kosong',
       'Baris 6: answer untuk tf harus B (benar) atau S (salah)',
     ])
+  })
+})
+
+describe('toQuestion (manual form)', () => {
+  it('trims input and drops trailing empty options', () => {
+    expect(toQuestion({ type: 'mc', text: '  Soal  ', options: [' X ', 'Y', '', '', ''], answer: 'b' })).toEqual({
+      type: 'mc',
+      text: 'Soal',
+      options: ['X', 'Y'],
+      answer_index: 1,
+    })
+  })
+
+  it('ignores options for true/false and rejects a gap in options', () => {
+    expect(toQuestion({ type: 'tf', text: 'Soal', options: ['junk'], answer: 'S' })).toEqual({
+      type: 'tf',
+      text: 'Soal',
+      options: ['Benar', 'Salah'],
+      answer_index: 1,
+    })
+    expect(toQuestion({ type: 'mc', text: 'Soal', options: ['X', '', 'Z'], answer: 'A' })).toBe('opsi harus diisi berurutan mulai dari a (minimal 2)')
+  })
+
+  it('does not treat Object.prototype keys as valid type or answer', () => {
+    expect(toQuestion({ type: 'constructor', text: 'Soal', options: [], answer: 'B' })).toBe('type harus mc/pg atau tf/bs')
+    expect(toQuestion({ type: 'tf', text: 'Soal', options: [], answer: 'toString' })).toBe('answer untuk tf harus B (benar) atau S (salah)')
   })
 })

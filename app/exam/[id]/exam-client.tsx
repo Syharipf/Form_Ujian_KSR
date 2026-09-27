@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import Notice from '@/app/notice'
+import ThemeToggle from '@/app/theme-toggle'
 import { GRACE_MS, type ExamView, type PublicQuestion } from '@/lib/exam'
 import { enterFullscreen, exitFullscreen, isFullscreen, subscribeFullscreen } from '@/lib/fullscreen'
 import { useAntiCheat } from './use-anti-cheat'
@@ -189,7 +190,10 @@ export default function ExamClient({ id }: { id: string }) {
             Pelanggaran {view.violation_count}/{view.max_violations}
           </p>
         </div>
-        <p className={`font-mono text-lg font-bold ${remaining < 10_000 ? 'text-danger' : ''}`}>{clock(remaining)}</p>
+        <div className="flex items-center gap-3">
+          <ThemeToggle compact />
+          <p className={`font-mono text-lg font-bold ${remaining < 10_000 ? 'text-danger' : ''}`}>{clock(remaining)}</p>
+        </div>
       </header>
 
       {notice && <p className="bg-warn-soft px-4 py-2 text-sm">{notice}</p>}

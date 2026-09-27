@@ -5,9 +5,10 @@ import QRCode from 'qrcode'
 import { requireAdmin } from '@/lib/admin-auth'
 import { finalizeExpired } from '@/lib/attempts'
 import { db, must } from '@/lib/db'
-import type { Attempt, Session } from '@/lib/exam'
-import { resetAllAttempts, resetAttempt, setOpen, updateSession, uploadQuestions } from '../../actions'
+import type { Attempt, Question, Session } from '@/lib/exam'
+import { deleteQuestion, resetAllAttempts, resetAttempt, saveQuestion, setOpen, updateSession, uploadQuestions } from '../../actions'
 import ConfirmButton from '../../confirm-button'
+import QuestionForm from '../../question-form'
 import SessionForm from '../../session-form'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -35,12 +36,8 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
   if (!session) notFound()
 
   await finalizeExpired(id)
-  const [questionCount, attempts, violations] = await Promise.all([
-    db()
-      .from('questions')
-      .select('id', { count: 'exact', head: true })
-      .eq('session_id', id)
-      .then((r) => r.count ?? 0),
+  const [questions, attempts, violations] = await Promise.all([
+    db().from('questions').select('*').eq('session_id', id).order('position').then(must) as Promise<Question[]>,
     db().from('attempts').select('*').eq('session_id', id).order('started_at').then(must) as Promise<Attempt[]>,
     db()
       .from('violations')
@@ -84,19 +81,79 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
         </div>
       </section>
 
-      <section className="rounded border border-line bg-surface p-4">
-        <h2 className="mb-2 font-semibold">Soal ({questionCount})</h2>
-        <form action={uploadQuestions.bind(null, id)} className="flex flex-wrap items-center gap-2">
-          <input type="file" name="file" accept=".csv,text/csv" required className="text-sm" />
-          <button className="rounded border border-line-strong px-4 py-2 text-sm">Upload &amp; ganti semua soal</button>
-        </form>
-        <p className="mt-2 text-sm text-muted">
-          Kolom CSV: <code>type,question,a,b,c,d,e,answer</code>. type <code>pg</code> (pilihan ganda) atau <code>bs</code> (benar/salah);
-          answer huruf opsi, atau B/S untuk benar/salah. Dari Excel: Save As → CSV.{' '}
-          <a href="/contoh-soal.csv" download className="underline">
-            Unduh contoh
-          </a>
-        </p>
+      <section className="space-y-3 rounded border border-line bg-surface p-4">
+        <h2 className="font-semibold">Soal ({questions.length})</h2>
+        {attempts.length > 0 && <p className="text-sm text-muted">Soal terkunci karena sudah ada peserta. Reset semua peserta untuk mengubah soal.</p>}
+        <ol className="space-y-2">
+          {questions.map((q, i) => (
+            <li key={q.id} className="rounded border border-line p-3 text-sm">
+              <p className="whitespace-pre-line font-medium">
+                {i + 1}. {q.text}
+              </p>
+              <ul className="mt-1 space-y-0.5">
+                {q.options.map((option, j) => (
+                  <li key={j} className={j === q.answer_index ? 'font-semibold text-ok' : 'text-secondary'}>
+                    {q.type === 'mc' && `${String.fromCodePoint(65 + j)}. `}
+                    {option}
+                    {j === q.answer_index && ' ✓'}
+                  </li>
+                ))}
+              </ul>
+              {attempts.length === 0 && (
+                <div className="mt-2 flex flex-wrap items-start gap-3">
+                  <details className="min-w-0 flex-1">
+                    <summary className="cursor-pointer text-xs underline">Edit</summary>
+                    <div className="mt-2">
+                      <QuestionForm action={saveQuestion.bind(null, id, q.id)} question={q} submitLabel="Simpan soal" />
+                    </div>
+                  </details>
+                  <form action={deleteQuestion.bind(null, id, q.id)}>
+                    <ConfirmButton message={`Hapus soal ${i + 1}?`} className="text-xs text-danger underline">
+                      Hapus
+                    </ConfirmButton>
+                  </form>
+                </div>
+              )}
+            </li>
+          ))}
+          {!questions.length && <li className="text-sm text-muted">Belum ada soal. Tambah manual atau upload CSV di bawah.</li>}
+        </ol>
+
+        {attempts.length === 0 && (
+          <>
+            <details open={!questions.length} className="rounded border border-line p-3">
+              <summary className="cursor-pointer font-semibold">+ Tambah soal manual</summary>
+              <div className="mt-3">
+                <QuestionForm action={saveQuestion.bind(null, id, null)} submitLabel="Tambah soal" />
+              </div>
+            </details>
+
+            <details className="rounded border border-line p-3">
+              <summary className="cursor-pointer font-semibold">Upload CSV (ganti semua soal)</summary>
+              <form action={uploadQuestions.bind(null, id)} className="mt-3 flex flex-wrap items-center gap-2">
+                {/* No accept filter: Android often labels .csv with other MIME types and greys the file out. */}
+                <input type="file" name="file" required className="min-w-0 text-sm" />
+                {questions.length ? (
+                  <ConfirmButton
+                    message={`Upload akan MENGGANTI ${questions.length} soal yang ada. Lanjutkan?`}
+                    className="rounded border border-line-strong px-4 py-2 text-sm"
+                  >
+                    Upload &amp; ganti semua soal
+                  </ConfirmButton>
+                ) : (
+                  <button className="rounded border border-line-strong px-4 py-2 text-sm">Upload &amp; ganti semua soal</button>
+                )}
+              </form>
+              <p className="mt-2 text-sm text-muted">
+                Kolom CSV: <code>type,question,a,b,c,d,e,answer</code>. type <code>pg</code> (pilihan ganda) atau <code>bs</code> (benar/salah);
+                answer huruf opsi, atau B/S untuk benar/salah. Dari Excel/Google Sheets: Save As / Download → CSV.{' '}
+                <a href="/contoh-soal.csv" download className="underline">
+                  Unduh contoh
+                </a>
+              </p>
+            </details>
+          </>
+        )}
       </section>
 
       <section className="rounded border border-line bg-surface p-4">

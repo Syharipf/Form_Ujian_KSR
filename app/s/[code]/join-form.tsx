@@ -3,6 +3,7 @@
 import { useState, useSyncExternalStore } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Session } from '@/lib/exam'
+import ThemeToggle from '@/app/theme-toggle'
 import { enterFullscreen, exitFullscreen } from '@/lib/fullscreen'
 
 type Props = {
@@ -63,9 +64,12 @@ export default function JoinForm({ session }: Props) {
 
   return (
     <main className="mx-auto max-w-md space-y-5 p-5">
-      <header>
-        <p className="text-sm font-semibold text-danger">KSR PMI Telkom · {session.kind === 'pre' ? 'Pre-test' : 'Post-test'}</p>
-        <h1 className="text-2xl font-bold">{session.title}</h1>
+      <header className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-danger">KSR PMI Telkom · {session.kind === 'pre' ? 'Pre-test' : 'Post-test'}</p>
+          <h1 className="text-2xl font-bold">{session.title}</h1>
+        </div>
+        <ThemeToggle />
       </header>
 
       <section className="rounded-lg border border-line bg-surface p-4 text-sm">

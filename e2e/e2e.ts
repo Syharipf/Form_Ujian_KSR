@@ -22,11 +22,11 @@ async function admin(browser: Browser) {
   await page.goto(`${BASE}/admin`)
   assert.match(page.url(), /\/admin\/login/)
   await page.fill('input[name=password]', 'salah')
-  await page.click('button')
+  await page.click('button:text-is("Masuk")')
   await page.waitForURL(/error=1/)
   await page.getByText('Password salah.').waitFor()
   await page.fill('input[name=password]', 'rahasia-e2e')
-  await page.click('button')
+  await page.click('button:text-is("Masuk")')
   await page.waitForURL(`${BASE}/admin`)
   log('admin login rejects wrong password, accepts right one')
   return page
@@ -42,6 +42,7 @@ async function createSession(page: Page, title: string, kind: 'pre' | 'post', mo
   await page.click('button:text-is("Buat sesi")')
   await page.waitForURL(/\/admin\/sessions\//)
   const code = (await page.locator('text=/kode [A-Z0-9]{6}/').innerText()).match(/kode ([A-Z0-9]{6})/)![1]
+  await page.click('summary:has-text("Upload CSV")')
   await page.setInputFiles('input[type=file]', CSV)
   await page.click('text=Upload & ganti semua soal')
   await page.getByText('4 soal tersimpan').waitFor()
@@ -156,15 +157,14 @@ try {
   assert.equal(anon.status(), 401)
   log('CSV export works, escapes formula names, requires admin')
 
-  // re-upload guarded while participants exist; reset one participant
-  await adminPage.setInputFiles('input[type=file]', CSV)
-  await adminPage.click('text=Upload & ganti semua soal')
-  await adminPage.getByText('Sudah ada peserta').waitFor()
+  // question editing is locked while participants exist; reset one participant
+  await adminPage.getByText('Soal terkunci karena sudah ada peserta').waitFor()
+  assert.equal(await adminPage.locator('input[type=file], summary:has-text("Tambah soal")').count(), 0)
   adminPage.once('dialog', (dlg) => dlg.accept())
   await row('Cici').getByText('Reset').click()
   await adminPage.getByText('Peserta direset').waitFor()
   assert.equal(await row('Cici').count(), 0)
-  log('question upload blocked while attempts exist; single reset works')
+  log('question editing locked while attempts exist; single reset works')
 
   // --- per-question mode ----------------------------------------------------
   const post = await createSession(adminPage, 'Post-test E2E', 'post', 'per_question', 5)
@@ -208,6 +208,69 @@ try {
   const api = await closed.request.post(`${BASE}/api/attempts`, { data: { code: post.code, name: 'X', nim: '9' } })
   assert.equal(api.status(), 403)
   log('closed session refuses new participants (page and API)')
+
+  // --- manual questions ----------------------------------------------------------
+  await adminPage.goto(`${BASE}/admin`)
+  await adminPage.fill('input[name=title]', 'Manual E2E')
+  await adminPage.click('button:text-is("Buat sesi")')
+  await adminPage.waitForURL(/\/admin\/sessions\//)
+  const addForm = adminPage.locator('details:has(summary:has-text("Tambah soal manual")) form')
+  await addForm.locator('textarea[name=question]').fill('Warna bendera PMI?')
+  await addForm.locator('input[name=a]').fill('Merah putih')
+  await addForm.locator('input[name=b]').fill('Biru')
+  await addForm.locator('input[name=c]').fill('Hijau')
+  await addForm.locator('select[name=answer]').selectOption('C')
+  await addForm.locator('button').click()
+  await adminPage.getByText('Soal ditambahkan').waitFor()
+  await adminPage.click('summary:has-text("Tambah soal manual")')
+  await addForm.locator('select[name=type]').selectOption('tf')
+  assert.equal(await addForm.locator('input[name=a]').count(), 0)
+  await addForm.locator('textarea[name=question]').fill('PMI berdiri tahun 1945.')
+  await addForm.locator('select[name=answer]').selectOption('B')
+  await addForm.locator('button').click()
+  await adminPage.getByText('Soal (2)').waitFor()
+  assert.match(await adminPage.locator('ol > li').first().innerText(), /C\. Hijau ✓/)
+  assert.match(await adminPage.locator('ol > li').nth(1).innerText(), /Benar ✓/)
+  log('manual form adds multiple-choice and true/false questions with the right key')
+
+  const first = adminPage.locator('ol > li').first()
+  await first.locator('summary:has-text("Edit")').click()
+  await first.locator('input[name=a]').fill('Merah')
+  await first.locator('select[name=answer]').selectOption('A')
+  await first.locator('button:text-is("Simpan soal")').click()
+  await adminPage.getByText('Soal diperbarui').waitFor()
+  assert.match(await adminPage.locator('ol > li').first().innerText(), /A\. Merah ✓/)
+  adminPage.once('dialog', (dlg) => dlg.accept())
+  await adminPage.locator('ol > li').nth(1).getByText('Hapus').click()
+  await adminPage.getByText('Soal dihapus').waitFor()
+  await adminPage.getByText('Soal (1)').waitFor()
+  log('manual edit changes the answer key; delete removes a question')
+
+  await adminPage.click('summary:has-text("Upload CSV")')
+  await adminPage.setInputFiles('input[type=file]', { name: 'soal.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from('PK\x03\x04 not really a zip') })
+  adminPage.once('dialog', (dlg) => dlg.accept())
+  await adminPage.click('text=Upload & ganti semua soal')
+  await adminPage.getByText('Ini file Excel, bukan CSV').waitFor()
+  await adminPage.getByText('Soal (1)').waitFor()
+  log('Excel file is rejected with a clear message and keeps existing questions')
+
+  // --- theme toggle --------------------------------------------------------------
+  const theme = () => adminPage.evaluate(() => document.documentElement.dataset.theme ?? 'system')
+  const surface = () => adminPage.evaluate(() => getComputedStyle(document.body).backgroundColor)
+  await adminPage.emulateMedia({ colorScheme: 'light' })
+  const lightBg = await surface()
+  const toggle = adminPage.getByRole('button', { name: /^Tema:/ })
+  await toggle.click() // Otomatis → Terang
+  await toggle.click() // Terang → Gelap
+  assert.equal(await theme(), 'dark')
+  assert.notEqual(await surface(), lightBg)
+  await adminPage.reload()
+  assert.equal(await theme(), 'dark')
+  assert.notEqual(await surface(), lightBg)
+  await adminPage.getByRole('button', { name: /^Tema:/ }).click() // Gelap → Otomatis
+  assert.equal(await theme(), 'system')
+  assert.equal(await surface(), lightBg)
+  log('theme toggle switches to dark, survives reload, and returns to following the device')
 
   console.log('\nALL E2E CHECKS PASSED')
 } catch (e) {
