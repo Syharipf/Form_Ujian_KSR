@@ -22,13 +22,21 @@ async function call(path: string, body?: object): Promise<ExamView> {
   return data
 }
 
-function forget(id: string) {
+// Drop the "resume" pointer for this attempt. After a submit, keep a `result:<code>` pointer
+// so the join page can link back here to show the score once it is released.
+function forget(id: string, submitted = false) {
   try {
     for (const key of Object.keys(localStorage)) {
-      if (key.startsWith('attempt:') && localStorage.getItem(key) === id) localStorage.removeItem(key)
+      if (localStorage.getItem(key) !== id) continue
+      if (key.startsWith('attempt:')) {
+        localStorage.removeItem(key)
+        if (submitted) localStorage.setItem(`result:${key.slice('attempt:'.length)}`, id)
+      } else if (key.startsWith('result:') && !submitted) localStorage.removeItem(key)
     }
   } catch {}
 }
+
+const RESULT_POLL_MS = 15_000
 
 const clock = (ms: number) => {
   const s = Math.ceil(ms / 1000)
@@ -126,13 +134,34 @@ export default function ExamClient({ id }: { id: string }) {
   useEffect(() => {
     if (view?.status !== 'submitted') return
     exitFullscreen()
-    forget(id)
+    forget(id, true)
   }, [view, id])
+
+  // Submitted but score not released yet: check back until the session is over.
+  const waitingForScore = view?.status === 'submitted' && view.score === undefined
+  useEffect(() => {
+    if (!waitingForScore) return
+    const t = setInterval(refresh, RESULT_POLL_MS)
+    return () => clearInterval(t)
+  }, [waitingForScore, refresh])
 
   if (fatal) return <Notice title="Tidak bisa membuka ujian" body={fatal.message} />
   if (!view) return <Notice title="Memuat ujian…" />
   if (view.status === 'submitted') {
-    return <Notice title="Jawaban terkirim" body="Terima kasih, ujianmu sudah selesai. Kamu boleh menutup halaman ini." />
+    if (view.score !== undefined) {
+      return (
+        <Notice title={view.title} body={`${view.name} · ${view.nim}`}>
+          <p className="mt-4 text-sm text-muted">Nilaimu</p>
+          <p className="text-6xl font-bold">{view.score}</p>
+        </Notice>
+      )
+    }
+    return (
+      <Notice
+        title="Jawaban terkirim"
+        body="Nilai akan muncul di halaman ini setelah panitia menutup sesi dan semua peserta selesai. Biarkan halaman ini terbuka, atau buka lagi QR/link ujian nanti."
+      />
+    )
   }
 
   // Answers and submit run one at a time so each response includes every earlier answer,

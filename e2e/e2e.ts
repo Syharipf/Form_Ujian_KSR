@@ -185,7 +185,8 @@ try {
     if (n === 3) await p.page.getByText('Soal 4 dari 4').waitFor()
   }
   await p.page.getByText('Jawaban terkirim').waitFor()
-  log('per-question: last answer finishes the exam')
+  await p.page.getByText('Nilai akan muncul di halaman ini').waitFor()
+  log('per-question: last answer finishes the exam; score is withheld while the session is open')
 
   await adminPage.goto(post.url)
   assert.match(await row('Ani').innerText(), /1001\s+75\s+0\s+Selesai/)
@@ -198,16 +199,42 @@ try {
   assert.match(await adminPage.locator('tbody tr', { hasText: 'Ani' }).innerText(), /1001\s+100\s+75\s+-25/)
   log('compare page joins pre/post by NIM with delta')
 
-  // --- closed session -----------------------------------------------------------
+  // --- closed session and score release -------------------------------------------
+  // Budi is still working (per-question, 4 × 5 s) when the session closes, so scores stay hidden.
+  const late = await participant(browser, post.code, 'Budi', '1004')
   await adminPage.goto(post.url)
   await adminPage.click('text=Tutup sesi')
   await adminPage.getByText('Sesi ditutup —').waitFor()
+  await adminPage.getByText('1 peserta masih mengerjakan').waitFor()
+  await p.page.reload()
+  await p.page.getByText('Nilai akan muncul di halaman ini').waitFor()
+  assert.ok(p.views.every((v) => !v.includes('"score"')))
+
+  // Budi answers whatever question is current until done (a slow step may let one time out).
+  while (!(await late.page.getByText('Jawaban terkirim').or(late.page.getByText('Nilaimu')).isVisible())) {
+    await late.page.locator('main button').first().click({ timeout: 2000 }).catch(() => {})
+    await late.page.locator('main button', { hasText: /^Jawab & / }).click({ timeout: 2000 }).catch(() => {})
+  }
+  await late.page.getByText('Nilaimu').waitFor() // the last one to finish sees the score right away
+  await p.page.reload()
+  await p.page.getByText('Nilaimu').waitFor()
+  assert.equal(await p.page.locator('main p.text-6xl').innerText(), '75')
+  await adminPage.reload()
+  await adminPage.getByText('Nilai sudah terlihat oleh peserta').waitFor()
+  log('score is shown only after the session is closed and the last participant finishes')
+
   const closed = await (await browser.newContext()).newPage()
   await closed.goto(`${BASE}/s/${post.code}`)
   await closed.getByText('Sesi ini belum dibuka atau sudah ditutup.').waitFor()
+  assert.equal(await closed.getByText('Lihat nilai ujianmu').count(), 0)
   const api = await closed.request.post(`${BASE}/api/attempts`, { data: { code: post.code, name: 'X', nim: '9' } })
   assert.equal(api.status(), 403)
   log('closed session refuses new participants (page and API)')
+
+  await p.page.goto(`${BASE}/s/${post.code}`)
+  await p.page.click('text=Lihat nilai ujianmu')
+  await p.page.getByText('Nilaimu').waitFor()
+  log('the join page links a finished participant back to their score')
 
   // --- manual questions ----------------------------------------------------------
   await adminPage.goto(`${BASE}/admin`)

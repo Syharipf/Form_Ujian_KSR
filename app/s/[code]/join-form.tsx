@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { Session } from '@/lib/exam'
 import ThemeToggle from '@/app/theme-toggle'
 import { enterFullscreen, exitFullscreen } from '@/lib/fullscreen'
+import ResultLink from './result-link'
 
 type Props = {
   session: Pick<Session, 'code' | 'title' | 'kind' | 'timer_mode' | 'duration_sec' | 'per_question_sec' | 'max_violations'>
@@ -86,6 +87,8 @@ export default function JoinForm({ session }: Props) {
           <li>Pelanggaran ke-{session.max_violations} membuat jawabanmu otomatis dikumpulkan.</li>
         </ul>
       </section>
+
+      <ResultLink code={session.code} />
 
       {existing ? (
         <button onClick={resume} className="w-full rounded bg-red-600 p-3 font-semibold text-white">

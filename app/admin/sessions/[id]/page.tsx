@@ -25,6 +25,14 @@ const VIOLATION: Record<string, string> = {
 const time = (iso: string) =>
   new Date(iso).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
+// Mirrors scoresReleased() in lib/attempts.ts: participants see their score only after the
+// session is closed and nobody is still working.
+function scoreStatus(isOpen: boolean, working: number) {
+  if (isOpen) return 'Nilai belum terlihat peserta. Nilai muncul setelah sesi ditutup dan semua peserta selesai.'
+  if (working) return `Nilai belum terlihat peserta: ${working} peserta masih mengerjakan.`
+  return 'Nilai sudah terlihat oleh peserta di HP masing-masing.'
+}
+
 type Violation = { id: string; attempt_id: string; type: string; created_at: string }
 
 export default async function SessionAdminPage(props: PageProps<'/admin/sessions/[id]'>) {
@@ -74,6 +82,9 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
           <p className="font-mono text-sm break-all">{link}</p>
           <p className={session.is_open ? 'text-ok' : 'text-muted'}>
             {session.is_open ? 'Sesi dibuka — peserta bisa mulai.' : 'Sesi ditutup — peserta belum bisa mulai.'}
+          </p>
+          <p className="text-sm text-muted">
+            {scoreStatus(session.is_open, attempts.filter((a) => !a.submitted_at).length)}
           </p>
           <form action={setOpen.bind(null, id, !session.is_open)}>
             <button className="rounded bg-red-600 px-4 py-2 font-semibold text-white">{session.is_open ? 'Tutup sesi' : 'Buka sesi'}</button>

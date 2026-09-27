@@ -161,9 +161,14 @@ describe('buildView', () => {
     expect(v.question_deadline_at).toBeNull()
   })
 
-  it('exposes no questions once submitted', () => {
-    const v = buildView(attempt({ submitted_at: iso(T0), submit_reason: 'manual', score: 50 }), session(), questions, new Date(T0))
+  it('exposes no questions once submitted, and the score only when released', () => {
+    const done = attempt({ submitted_at: iso(T0), submit_reason: 'manual', score: 50 })
+    const v = buildView(done, session(), questions, new Date(T0))
     expect(v.status).toBe('submitted')
     expect(v.questions).toEqual([])
+    expect(JSON.stringify(v)).not.toContain('score')
+    expect(buildView(done, session(), questions, new Date(T0), true).score).toBe(50)
+    // an unfinished attempt never carries a score, even if the caller says released
+    expect(JSON.stringify(buildView(attempt({ score: 50 }), session(), questions, new Date(T0), true))).not.toContain('score')
   })
 })
