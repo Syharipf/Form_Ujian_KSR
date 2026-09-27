@@ -30,7 +30,7 @@ function apply(theme: Theme) {
 }
 
 // Cycles Otomatis (follow device) → Terang → Gelap. `compact` shows only the icon.
-export default function ThemeToggle({ compact = false }: { compact?: boolean }) {
+export default function ThemeToggle({ compact = false }: Readonly<{ compact?: boolean }>) {
   const theme = useSyncExternalStore(subscribe, read, () => 'system' as Theme)
   return (
     <button
@@ -46,7 +46,7 @@ export default function ThemeToggle({ compact = false }: { compact?: boolean }) 
   )
 }
 
-function Icon({ theme }: { theme: Theme }) {
+function Icon({ theme }: Readonly<{ theme: Theme }>) {
   const common = { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, 'aria-hidden': true }
   if (theme === 'light') {
     return (

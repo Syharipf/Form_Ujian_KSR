@@ -109,7 +109,10 @@ export async function uploadQuestions(id: string, formData: FormData) {
 // Add (questionId null) or edit one question from the manual form.
 export async function saveQuestion(sessionId: string, questionId: string | null, formData: FormData) {
   await requireAdmin()
-  const field = (key: string) => String(formData.get(key) ?? '')
+  const field = (key: string) => {
+    const value = formData.get(key)
+    return typeof value === 'string' ? value : ''
+  }
   const q = toQuestion({ type: field('type'), text: field('question'), options: ['a', 'b', 'c', 'd', 'e'].map(field), answer: field('answer') })
   if (typeof q === 'string') return back(sessionId, `Soal belum tersimpan — ${q}`)
   if (await hasAttempts(sessionId)) return back(sessionId, LOCKED)

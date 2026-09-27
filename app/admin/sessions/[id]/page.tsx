@@ -93,7 +93,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
               <ul className="mt-1 space-y-0.5">
                 {q.options.map((option, j) => (
                   <li key={j} className={j === q.answer_index ? 'font-semibold text-ok' : 'text-secondary'}>
-                    {q.type === 'mc' && `${String.fromCharCode(65 + j)}. `}
+                    {q.type === 'mc' && `${String.fromCodePoint(65 + j)}. `}
                     {option}
                     {j === q.answer_index && ' ✓'}
                   </li>

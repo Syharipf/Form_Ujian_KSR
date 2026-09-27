@@ -11,11 +11,11 @@ export default function QuestionForm({
   action,
   question,
   submitLabel,
-}: {
+}: Readonly<{
   action: (formData: FormData) => Promise<void>
   question?: Pick<Question, 'type' | 'text' | 'options' | 'answer_index'>
   submitLabel: string
-}) {
+}>) {
   const [type, setType] = useState(question?.type ?? 'mc')
   const mcAnswer = question?.type === 'mc' ? LETTERS[question.answer_index] : 'A'
   const tfAnswer = question?.type === 'tf' && question.answer_index === 1 ? 'S' : 'B'
@@ -23,14 +23,14 @@ export default function QuestionForm({
   return (
     <form action={action} className="grid gap-3 text-sm">
       <label className="grid gap-1">
-        Jenis soal
+        <span>Jenis soal</span>
         <select name="type" value={type} onChange={(e) => setType(e.target.value as 'mc' | 'tf')} className={input}>
           <option value="mc">Pilihan ganda</option>
           <option value="tf">Benar / Salah</option>
         </select>
       </label>
       <label className="grid gap-1">
-        Pertanyaan
+        <span>Pertanyaan</span>
         <textarea name="question" required rows={3} defaultValue={question?.text} className={input} />
       </label>
       {type === 'mc' ? (
@@ -50,7 +50,7 @@ export default function QuestionForm({
             ))}
           </div>
           <label className="grid gap-1">
-            Jawaban benar
+            <span>Jawaban benar</span>
             <select name="answer" defaultValue={mcAnswer} className={input}>
               {LETTERS.map((letter) => (
                 <option key={letter}>{letter}</option>
@@ -60,14 +60,14 @@ export default function QuestionForm({
         </>
       ) : (
         <label className="grid gap-1">
-          Jawaban benar
+          <span>Jawaban benar</span>
           <select name="answer" defaultValue={tfAnswer} className={input}>
             <option value="B">Benar</option>
             <option value="S">Salah</option>
           </select>
         </label>
       )}
-      <button className="rounded bg-red-600 p-2 font-semibold text-white">{submitLabel}</button>
+      <button type="submit" className="rounded bg-red-600 p-2 font-semibold text-white">{submitLabel}</button>
     </form>
   )
 }
