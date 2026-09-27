@@ -11,8 +11,8 @@ export default async function LoginPage(props: PageProps<'/admin/login'>) {
           <p className="text-sm text-muted">Kelola sesi, soal, dan nilai peserta.</p>
         </div>
         <label className="grid gap-1.5 text-sm font-semibold">
-          Password
-          <input type="password" name="password" required autoFocus className="field font-normal" />
+          <span>Password</span>
+          <input type="password" name="password" required className="field font-normal" />
         </label>
         {error && (
           <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">

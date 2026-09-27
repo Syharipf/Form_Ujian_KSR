@@ -91,9 +91,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
       {/* Joins, answers, violations and the score release only happen while someone can still work. */}
       {(session.is_open || working > 0) && <AutoRefresh />}
       {msg && (
-        <p role="status" className="rounded-xl bg-warn-soft p-3 text-sm font-medium">
-          {msg}
-        </p>
+        <output className="block rounded-xl bg-warn-soft p-3 text-sm font-medium">{msg}</output>
       )}
 
       <section className="card grid gap-5 p-4 sm:grid-cols-[220px_1fr] sm:p-6">

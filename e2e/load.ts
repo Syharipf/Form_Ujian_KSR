@@ -51,7 +51,12 @@ async function localSession() {
   await page.getByText('soal tersimpan').waitFor()
   await page.click('text=Buka sesi')
   await page.getByText('Sesi dibuka —').waitFor()
-  return { code, close: async () => (await page.click('text=Tutup sesi'), await page.getByText('Sesi ditutup —').waitFor(), await browser.close()) }
+  const close = async () => {
+    await page.click('text=Tutup sesi')
+    await page.getByText('Sesi ditutup —').waitFor()
+    await browser.close()
+  }
+  return { code, close }
 }
 
 const local = process.env.CODE ? null : await localSession()
@@ -69,8 +74,8 @@ report('open exam', opens)
 const answers: Result[] = []
 await Promise.all(
   opens.map(async (open, i) => {
-    for (const q of open.data.questions ?? []) {
-      answers.push(await api(`/api/attempts/${ids[i]}/answer`, { question_id: q.id, choice: Math.floor(Math.random() * q.options.length) }))
+    for (const [j, q] of (open.data.questions ?? []).entries()) {
+      answers.push(await api(`/api/attempts/${ids[i]}/answer`, { question_id: q.id, choice: (i + j) % q.options.length }))
     }
   }),
 )

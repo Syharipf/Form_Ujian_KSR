@@ -105,11 +105,11 @@ export default function JoinForm({ session }: Props) {
       ) : (
         <form onSubmit={start} className="card space-y-4 p-4">
           <label className="grid gap-1.5 text-sm font-semibold">
-            Nama lengkap
+            <span>Nama lengkap</span>
             <input name="name" required maxLength={100} autoComplete="name" className="field font-normal" />
           </label>
           <label className="grid gap-1.5 text-sm font-semibold">
-            NIM
+            <span>NIM</span>
             <input name="nim" required maxLength={30} autoComplete="off" className="field font-normal" />
           </label>
           {error && (
@@ -128,9 +128,9 @@ export default function JoinForm({ session }: Props) {
 
 const ICONS = {
   clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
-  bell: <><path d="M8.7 3A6 6 0 0 1 18 8c0 3 .5 5 1.3 6.5M6 8c0 7-3 9-3 9h14M10.3 21a1.9 1.9 0 0 0 3.4 0M2 2l20 20" /></>,
-  screen: <><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3" /></>,
-  alert: <><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01" /></>,
+  bell: <path d="M8.7 3A6 6 0 0 1 18 8c0 3 .5 5 1.3 6.5M6 8c0 7-3 9-3 9h14M10.3 21a1.9 1.9 0 0 0 3.4 0M2 2l20 20" />,
+  screen: <path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3" />,
+  alert: <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01" />,
   globe: <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></>,
 }
 

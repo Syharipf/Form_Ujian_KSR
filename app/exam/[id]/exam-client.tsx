@@ -392,7 +392,7 @@ function QuestionCard({ q, selected, onPick }: { q: PublicQuestion; selected: nu
                 <span
                   className={`flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-bold ${on ? 'bg-primary text-on-primary' : 'bg-subtle'}`}
                 >
-                  {String.fromCharCode(65 + i)}.
+                  {String.fromCodePoint(65 + i)}.
                 </span>
               )}
               <span className="min-w-0">{option}</span>
