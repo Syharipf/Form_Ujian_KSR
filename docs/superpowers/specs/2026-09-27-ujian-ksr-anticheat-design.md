@@ -43,8 +43,14 @@ Lapisan anti-cheat:
   - `score`: 0–100, dibulatkan ke bilangan bulat.
 - `violations`: id, attempt_id, type, detail, created_at.
 
+### Akses via QR / link
+- Tiap sesi punya link `https://<domain>/s/<CODE>`; admin menampilkan QR-nya (lib `qrcode`) untuk ditayangkan/dicetak.
+- APK mendaftarkan Android App Link untuk `/s/*` (`autoVerify`, file `public/.well-known/assetlinks.json` berisi SHA-256 sertifikat signing APK). Scan QR di HP yang sudah pasang APK → langsung terbuka di APK, tanpa pilihan browser.
+- Belum pasang APK (link terbuka di browser) dan sesi `require_apk` → halaman berisi tombol unduh APK (`public/ksr-ujian.apk`) + langkah install; setelah install, scan QR lagi.
+- Sesi tanpa `require_apk` → ujian bisa langsung dikerjakan di browser (lock level web saja).
+
 ### Alur peserta
-1. APK buka `/` → isi kode sesi, nama, NIM.
+1. Scan QR / buka link → `/s/<CODE>` (kode sesi terisi otomatis) → isi nama, NIM.
 2. `POST /api/attempts` → cek sesi open + require_apk; buat attempt dengan urutan acak; balas attempt id (uuid acak = token). Disimpan di `localStorage` untuk resume. NIM yang sudah punya attempt di sesi itu → ditolak (409, "hubungi panitia"); admin bisa reset attempt.
 3. `GET /api/attempts/[id]` → soal tanpa `answer_index` + sisa waktu. Mode total: semua soal. Mode per soal: soal aktif saja.
 4. `POST /api/attempts/[id]/answer` → cek deadline; mode per soal: maju index, tolak soal lama.
@@ -57,7 +63,7 @@ Lapisan anti-cheat:
 
 ### Admin (`/admin`)
 - Login: `ADMIN_PASSWORD` env → cookie httpOnly bertanda HMAC.
-- Kelola sesi: buat/edit pengaturan, buka/tutup, reset attempt peserta.
+- Kelola sesi: buat/edit pengaturan, buka/tutup, reset attempt peserta, tampilkan QR + link sesi.
 - Upload soal CSV (`papaparse`): `type,question,a,b,c,d,e,answer` (answer huruf; tf pakai B/S). Excel → simpan sebagai CSV.
 - Hasil per sesi: nama, NIM, nilai, jumlah pelanggaran, alasan submit, log pelanggaran; export CSV.
 - Bandingkan pre vs post: pilih 2 sesi → join by NIM → nilai pre, post, selisih.
@@ -72,4 +78,4 @@ supabase/schema.sql
 ## Pengujian
 - `lib/exam.test.ts` (vitest): mapping acak opsi → nilai benar, deadline total & per soal, auto-submit di pelanggaran ke-3.
 - Manual web: `npm run dev`, buat sesi (require_apk off), upload CSV contoh, kerjakan di browser, pindah tab 3× → auto-submit, cek hasil + export + halaman bandingkan.
-- Manual APK: `./gradlew assembleDebug` → `adb install`, screenshot = hitam, Circle to Search diblok, tarik notifikasi → peringatan, ke-3 → submit, tombol home/recent terkunci selama ujian.
+- Manual APK: `./gradlew assembleRelease` → `adb install`, scan QR sesi → terbuka langsung di APK, screenshot = hitam, Circle to Search diblok, tarik notifikasi → peringatan, ke-3 → submit, tombol home/recent terkunci selama ujian.
