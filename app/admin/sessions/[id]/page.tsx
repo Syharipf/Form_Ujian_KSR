@@ -3,14 +3,15 @@ import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import QRCode from 'qrcode'
 import { requireAdmin } from '@/lib/admin-auth'
-import { finalizeExpired } from '@/lib/attempts'
+import { finalizeExpired, resultsStatus } from '@/lib/attempts'
 import { db, must } from '@/lib/db'
-import { formatDate, type Attempt, type Question, type Session } from '@/lib/exam'
+import { formatDate, type Attempt, type Question, type ResultsStatus, type Session } from '@/lib/exam'
 import { deleteQuestion, deleteSession, resetAllAttempts, resetAttempt, saveQuestion, setOpen, updateSession, uploadQuestions } from '../../actions'
 import LinkPending from '@/app/link-pending'
 import SubmitButton from '@/app/submit-button'
 import QuestionForm from '../../question-form'
 import SessionForm from '../../session-form'
+import { AutoRefresh, Countdown } from './live'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -26,15 +27,17 @@ const VIOLATION: Record<string, string> = {
 const time = (iso: string) =>
   new Date(iso).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
-// Mirrors resultsStatus() in lib/attempts.ts: participants see their score only after the session
-// is closed and nobody is still working; until then they count down to the last deadline.
-function scoreStatus(isOpen: boolean, working: Attempt[]) {
-  if (isOpen) return 'Nilai belum terlihat peserta. Nilai muncul serentak setelah sesi ditutup dan semua peserta selesai.'
-  if (working.length) {
-    const last = working.reduce((max, a) => (a.deadline_at > max ? a.deadline_at : max), working[0].deadline_at)
-    return `Nilai belum terlihat peserta: ${working.length} peserta masih mengerjakan. Nilai muncul serentak paling lambat pukul ${time(last)} WIB.`
-  }
-  return 'Nilai sudah terlihat oleh peserta di HP masing-masing.'
+// Participants see their score only once resultsStatus() releases it: session closed and nobody still
+// working. Until then a countdown runs to the last participant's deadline.
+function ScoreStatus({ results, working, serverNow }: Readonly<{ results: ResultsStatus; working: number; serverNow: number }>) {
+  if (results.released) return <>Nilai sudah terlihat oleh peserta di HP masing-masing.</>
+  if (results.at === null) return <>Nilai belum terlihat peserta. Nilai muncul serentak setelah sesi ditutup dan semua peserta selesai.</>
+  return (
+    <>
+      Nilai belum terlihat peserta: {working} peserta masih mengerjakan. Nilai muncul serentak dalam{' '}
+      <Countdown until={results.at} serverNow={serverNow} /> (pukul {time(new Date(results.at).toISOString())} WIB).
+    </>
+  )
 }
 
 type Violation = { id: string; attempt_id: string; type: string; created_at: string }
@@ -48,7 +51,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
   if (!session) notFound()
 
   await finalizeExpired(id)
-  const [questions, attempts, violations] = await Promise.all([
+  const [questions, attempts, violations, results] = await Promise.all([
     db().from('questions').select('*').eq('session_id', id).order('position').then(must) as Promise<Question[]>,
     db().from('attempts').select('*').eq('session_id', id).order('started_at').then(must) as Promise<Attempt[]>,
     db()
@@ -57,7 +60,11 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
       .eq('attempts.session_id', id)
       .order('created_at')
       .then(must) as Promise<Violation[]>,
+    resultsStatus(session),
   ])
+  const working = attempts.filter((a) => !a.submitted_at).length
+  // eslint-disable-next-line react-hooks/purity -- server component, rendered once per request
+  const serverNow = Date.now()
   const byAttempt = Map.groupBy(violations, (v) => v.attempt_id)
 
   const h = await headers()
@@ -76,6 +83,8 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
         </p>
       </header>
 
+      {/* Joins, answers, violations and the score release only happen while someone can still work. */}
+      {(session.is_open || working > 0) && <AutoRefresh />}
       {msg && <p className="rounded bg-warn-soft p-3 text-sm">{msg}</p>}
 
       <section className="grid gap-4 rounded border border-line bg-surface p-4 sm:grid-cols-[240px_1fr]">
@@ -88,7 +97,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
             {session.is_open ? 'Sesi dibuka — peserta bisa mulai.' : 'Sesi ditutup — peserta belum bisa mulai.'}
           </p>
           <p className="text-sm text-muted">
-            {scoreStatus(session.is_open, attempts.filter((a) => !a.submitted_at))}
+            <ScoreStatus results={results} working={working} serverNow={serverNow} />
           </p>
           <form action={setOpen.bind(null, id, !session.is_open)}>
             <SubmitButton className="rounded bg-red-600 px-4 py-2 font-semibold text-white">{session.is_open ? 'Tutup sesi' : 'Buka sesi'}</SubmitButton>
