@@ -10,8 +10,8 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'Ujian KSR PMI Telkom',
-  description: 'Pre-test dan post-test KSR PMI Telkom',
+  title: 'UjiKSR',
+  description: 'Pre-test dan post-test KSR PMI Universitas Telkom',
   robots: { index: false, follow: false },
 }
 

@@ -14,7 +14,7 @@ export default function Home() {
       <div className="fixed right-4 top-4">
         <ThemeToggle />
       </div>
-      <p className="text-sm font-semibold text-danger">KSR PMI Telkom</p>
+      <p className="text-sm font-semibold text-danger">UjiKSR · KSR PMI Universitas Telkom</p>
       <h1 className="text-2xl font-bold">Ujian Pre-test / Post-test</h1>
       <p className="text-secondary">Scan QR dari panitia, atau masukkan kode sesi.</p>
       <form action={open} className="flex gap-2">
