@@ -1,11 +1,17 @@
 -- Run once in Supabase → SQL Editor.
 -- All access goes through the Next.js server with the secret key; RLS is on with no
 -- policies, so the public anon key can read nothing.
+--
+-- Upgrading a database created before exam dates existed? Run just this:
+--   alter table exam_sessions add column held_on date;
+--   update exam_sessions set held_on = (created_at at time zone 'Asia/Jakarta')::date;
+--   alter table exam_sessions alter column held_on set not null, alter column held_on set default current_date;
 
 create table exam_sessions (
   id uuid primary key default gen_random_uuid(),
   code text not null unique,
   title text not null,
+  held_on date not null default current_date,
   kind text not null check (kind in ('pre', 'post')),
   timer_mode text not null check (timer_mode in ('total', 'per_question')),
   duration_sec int not null default 1800 check (duration_sec > 0),

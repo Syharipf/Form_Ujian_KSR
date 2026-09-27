@@ -3,7 +3,7 @@ import LinkPending from '@/app/link-pending'
 import SubmitButton from '@/app/submit-button'
 import { requireAdmin } from '@/lib/admin-auth'
 import { db, must } from '@/lib/db'
-import type { Session } from '@/lib/exam'
+import { formatDate, type Session } from '@/lib/exam'
 import { createSession, logout } from './actions'
 import SessionForm from './session-form'
 import SetupError from './setup-error'
@@ -12,7 +12,7 @@ export default async function AdminHome() {
   await requireAdmin()
   let sessions: Session[]
   try {
-    sessions = must(await db().from('exam_sessions').select('*').order('created_at', { ascending: false }))
+    sessions = must(await db().from('exam_sessions').select('*').order('held_on', { ascending: false }).order('created_at', { ascending: false }))
   } catch (error) {
     return <SetupError error={error} />
   }
@@ -20,7 +20,7 @@ export default async function AdminHome() {
   return (
     <main className="mx-auto max-w-3xl space-y-8 p-4">
       <header className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Admin Ujian KSR PMI Telkom</h1>
+        <h1 className="text-xl font-bold">Admin UjiKSR</h1>
         <form action={logout}>
           <SubmitButton className="text-sm underline">Keluar</SubmitButton>
         </form>
@@ -35,7 +35,7 @@ export default async function AdminHome() {
                 <span>
                   {s.title}{' '}
                   <span className="text-sm text-muted">
-                    ({s.kind === 'pre' ? 'Pre' : 'Post'} · {s.code})
+                    ({formatDate(s.held_on)} · {s.kind === 'pre' ? 'Pre' : 'Post'} · {s.code})
                   </span>
                 </span>
                 <span className="flex items-center gap-1">

@@ -71,4 +71,12 @@ describe('schema.sql', () => {
     )
     await expect(bad).rejects.toThrow(/check constraint/)
   })
+
+  it('deleting a session removes its questions, attempts and violations', async () => {
+    await db.query('select add_violation($1, $2)', [attemptId, 'blur'])
+    await db.query('delete from exam_sessions')
+    for (const table of ['questions', 'attempts', 'violations']) {
+      expect((await db.query(`select * from ${table}`)).rows).toEqual([])
+    }
+  })
 })

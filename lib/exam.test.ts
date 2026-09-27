@@ -37,6 +37,7 @@ const session = (over: Partial<Session> = {}): Session => ({
   id: 's',
   code: 'ABC123',
   title: 'Pre-test',
+  held_on: '2026-09-27',
   kind: 'pre',
   timer_mode: 'total',
   duration_sec: 600,

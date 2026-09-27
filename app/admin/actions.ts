@@ -42,11 +42,14 @@ function sessionFields(f: FormData) {
   const title = String(f.get('title') ?? '').trim()
   const kind = String(f.get('kind'))
   const timer_mode = String(f.get('timer_mode'))
+  const held_on = String(f.get('held_on') ?? '')
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(held_on) || Number.isNaN(Date.parse(held_on))) throw new Error('Tanggal sesi tidak valid')
   if (!title || title.length > 120 || !['pre', 'post'].includes(kind) || !['total', 'per_question'].includes(timer_mode)) {
     throw new Error('Data sesi tidak valid')
   }
   return {
     title,
+    held_on,
     kind,
     timer_mode,
     duration_sec: int('duration_min', 1, 600) * 60,
@@ -77,6 +80,13 @@ export async function setOpen(id: string, open: boolean) {
   await requireAdmin()
   must(await db().from('exam_sessions').update({ is_open: open }).eq('id', id))
   back(id, open ? 'Sesi dibuka' : 'Sesi ditutup')
+}
+
+// Questions, attempts and violations go with it (on delete cascade).
+export async function deleteSession(id: string) {
+  await requireAdmin()
+  must(await db().from('exam_sessions').delete().eq('id', id))
+  redirect('/admin')
 }
 
 // Attempts reference question ids and option counts; changing questions under them would break grading.
