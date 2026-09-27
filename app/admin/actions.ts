@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { requireAdmin } from '@/lib/admin-auth'
 import { COOKIE, makeToken, passwordMatches, TTL_MS } from '@/lib/admin-token'
-import { parseQuestionsCsv } from '@/lib/csv'
+import { parseQuestionsCsv, toQuestion } from '@/lib/csv'
 import { db, must } from '@/lib/db'
 
 const back = (id: string, msg: string) => redirect(`/admin/sessions/${id}?msg=${encodeURIComponent(msg)}`)
@@ -79,22 +79,57 @@ export async function setOpen(id: string, open: boolean) {
   back(id, open ? 'Sesi dibuka' : 'Sesi ditutup')
 }
 
+// Attempts reference question ids and option counts; changing questions under them would break grading.
+async function hasAttempts(sessionId: string) {
+  const { count, error } = await db().from('attempts').select('id', { count: 'exact', head: true }).eq('session_id', sessionId)
+  if (error) throw error
+  return Boolean(count)
+}
+const LOCKED = 'Sudah ada peserta. Reset semua peserta dulu sebelum mengubah soal.'
+
 export async function uploadQuestions(id: string, formData: FormData) {
   await requireAdmin()
   const file = formData.get('file')
   if (!(file instanceof File) || file.size === 0) return back(id, 'Pilih file CSV dulu')
-  const { questions, errors } = parseQuestionsCsv(await file.text())
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  // .xlsx/.xls are binary (zip / OLE); parsing them as text only yields confusing row errors.
+  if ((bytes[0] === 0x50 && bytes[1] === 0x4b) || (bytes[0] === 0xd0 && bytes[1] === 0xcf)) {
+    return back(id, 'Ini file Excel, bukan CSV. Di Excel/Google Sheets pilih Save As / Download → CSV, lalu upload file .csv-nya.')
+  }
+  const { questions, errors } = parseQuestionsCsv(new TextDecoder().decode(bytes))
   if (errors.length) return back(id, `Upload gagal — ${errors.slice(0, 5).join(' · ')}`)
   if (!questions.length) return back(id, 'File tidak berisi soal')
-
-  // Attempts reference question ids; replacing questions under them would break grading.
-  const { count, error } = await db().from('attempts').select('id', { count: 'exact', head: true }).eq('session_id', id)
-  if (error) throw error
-  if (count) return back(id, 'Sudah ada peserta. Reset semua peserta dulu sebelum mengganti soal.')
+  if (await hasAttempts(id)) return back(id, LOCKED)
 
   must(await db().from('questions').delete().eq('session_id', id))
   must(await db().from('questions').insert(questions.map((q) => ({ ...q, session_id: id }))))
   back(id, `${questions.length} soal tersimpan`)
+}
+
+// Add (questionId null) or edit one question from the manual form.
+export async function saveQuestion(sessionId: string, questionId: string | null, formData: FormData) {
+  await requireAdmin()
+  const field = (key: string) => String(formData.get(key) ?? '')
+  const q = toQuestion({ type: field('type'), text: field('question'), options: ['a', 'b', 'c', 'd', 'e'].map(field), answer: field('answer') })
+  if (typeof q === 'string') return back(sessionId, `Soal belum tersimpan — ${q}`)
+  if (await hasAttempts(sessionId)) return back(sessionId, LOCKED)
+
+  if (questionId) {
+    must(await db().from('questions').update(q).eq('id', questionId).eq('session_id', sessionId))
+    return back(sessionId, 'Soal diperbarui')
+  }
+  const last: { position: number } | null = must(
+    await db().from('questions').select('position').eq('session_id', sessionId).order('position', { ascending: false }).limit(1).maybeSingle(),
+  )
+  must(await db().from('questions').insert({ ...q, session_id: sessionId, position: (last?.position ?? -1) + 1 }))
+  back(sessionId, 'Soal ditambahkan')
+}
+
+export async function deleteQuestion(sessionId: string, questionId: string) {
+  await requireAdmin()
+  if (await hasAttempts(sessionId)) return back(sessionId, LOCKED)
+  must(await db().from('questions').delete().eq('id', questionId).eq('session_id', sessionId))
+  back(sessionId, 'Soal dihapus')
 }
 
 export async function resetAttempt(sessionId: string, attemptId: string) {

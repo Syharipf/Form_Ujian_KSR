@@ -1,7 +1,20 @@
 @import "tailwindcss";
 
-/* Semantic colors that follow the device's light/dark setting. Use these (bg-surface,
-   border-line, text-muted, …) instead of raw palette colors so both themes stay in sync. */
+/* Semantic colors that follow the theme. Use these (bg-surface, border-line, text-muted, …)
+   instead of raw palette colors so both themes stay in sync.
+   Theme: <html data-theme="light|dark"> is the user's choice (theme-toggle.tsx);
+   no attribute means "follow the device". */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme]), :root:not([data-theme]) *) {
+      @slot;
+    }
+  }
+}
+
 :root {
   color-scheme: light dark;
   --page: var(--color-slate-50);
@@ -18,9 +31,29 @@
   --warn-soft: var(--color-amber-100);
   --ok: var(--color-green-700);
 }
-
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+/* Dark values appear twice (device setting / explicit choice); light-dark() would avoid that
+   but needs Chrome 123+, and participants may be on older phones. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: var(--color-slate-950);
+  --surface: var(--color-slate-900);
+  --subtle: var(--color-slate-800);
+  --line: var(--color-slate-800);
+  --line-strong: var(--color-slate-600);
+  --fg: var(--color-slate-100);
+  --secondary: var(--color-slate-300);
+  --muted: var(--color-slate-400);
+  --danger: var(--color-red-400);
+  --danger-soft: color-mix(in oklab, var(--color-red-600) 20%, transparent);
+  --danger-line: var(--color-red-800);
+  --warn-soft: color-mix(in oklab, var(--color-amber-500) 25%, transparent);
+  --ok: var(--color-green-400);
+}
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --page: var(--color-slate-950);
     --surface: var(--color-slate-900);
     --subtle: var(--color-slate-800);

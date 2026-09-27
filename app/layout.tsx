@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { themeScript } from '@/lib/theme'
 import './globals.css'
 
 export const viewport: Viewport = {
@@ -16,7 +17,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="id">
+    // suppressHydrationWarning: themeScript may set data-theme before React hydrates.
+    <html lang="id" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="min-h-dvh bg-page text-fg antialiased">{children}</body>
     </html>
   )

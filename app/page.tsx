@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import ThemeToggle from './theme-toggle'
 
 async function open(formData: FormData) {
   'use server'
@@ -9,6 +10,9 @@ async function open(formData: FormData) {
 export default function Home() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-4 p-6">
+      <div className="fixed right-4 top-4">
+        <ThemeToggle />
+      </div>
       <p className="text-sm font-semibold text-danger">KSR PMI Telkom</p>
       <h1 className="text-2xl font-bold">Ujian Pre-test / Post-test</h1>
       <p className="text-secondary">Scan QR dari panitia, atau masukkan kode sesi.</p>
