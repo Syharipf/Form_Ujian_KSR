@@ -39,10 +39,33 @@ function forget(id: string, submitted = false) {
 }
 
 const RESULT_POLL_MS = 15_000
+const RESULT_RETRY_MS = 2_000
+
+// While waiting for scores: poll every RESULT_POLL_MS, but once the release moment is closer than
+// that, wake exactly at it so every participant's score appears at the same time.
+function nextResultCheck(untilRelease: number | null) {
+  if (untilRelease === null || untilRelease > RESULT_POLL_MS) return RESULT_POLL_MS
+  if (untilRelease > 0) return untilRelease
+  return RESULT_RETRY_MS
+}
 
 const clock = (ms: number) => {
   const s = Math.ceil(ms / 1000)
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
+// Submitted but score not released yet: check back until it is (re-armed after every check, even a
+// failed one), waking exactly at the shared release moment when it is near.
+function useResultChecks(view: ExamView | null, offset: number, refresh: () => Promise<unknown>) {
+  const [checks, setChecks] = useState(0)
+  const waiting = view?.status === 'submitted' && view.score === undefined
+  const resultsAt = view?.results_at ?? null
+  useEffect(() => {
+    if (!waiting) return
+    const delay = nextResultCheck(resultsAt === null ? null : resultsAt - (Date.now() + offset))
+    const t = setTimeout(() => refresh().finally(() => setChecks((n) => n + 1)), delay)
+    return () => clearTimeout(t)
+  }, [waiting, resultsAt, offset, refresh, checks])
 }
 
 export default function ExamClient({ id }: { id: string }) {
@@ -139,17 +162,11 @@ export default function ExamClient({ id }: { id: string }) {
     forget(id, true)
   }, [view, id])
 
-  // Submitted but score not released yet: check back until the session is over.
-  const waitingForScore = view?.status === 'submitted' && view.score === undefined
-  useEffect(() => {
-    if (!waitingForScore) return
-    const t = setInterval(refresh, RESULT_POLL_MS)
-    return () => clearInterval(t)
-  }, [waitingForScore, refresh])
+  useResultChecks(view, offset, refresh)
 
   if (fatal) return <Notice title="Tidak bisa membuka ujian" body={fatal.message} />
   if (!view) return <Notice title="Memuat ujian…" />
-  if (view.status === 'submitted') return <Submitted view={view} />
+  if (view.status === 'submitted') return <Submitted view={view} serverNow={now + offset} />
 
   // Answers and submit run one at a time so each response includes every earlier answer,
   // and a quick "Kumpulkan" never overtakes the last pick. Only the final response is applied,
@@ -286,16 +303,32 @@ export default function ExamClient({ id }: { id: string }) {
 
 const cheer = (score: number) => (score >= 80 ? 'Luar biasa!' : score >= 60 ? 'Kerja bagus!' : 'Terima kasih sudah berjuang!')
 
-function Submitted({ view }: Readonly<{ view: ExamView }>) {
+function Submitted({ view, serverNow }: Readonly<{ view: ExamView; serverNow: number }>) {
   // The only way to reach the limit is the auto-submit, so no party for that.
   const celebrate = view.violation_count < view.max_violations
-  if (view.score === undefined) {
+  const title = celebrate ? 'Selamat, kamu sudah selesai! 🎉' : 'Ujian dikumpulkan otomatis'
+  // ms until scores are released for everyone (null while the session is still open)
+  const resultsIn = view.results_at === null ? null : Math.max(0, view.results_at - serverNow)
+  if (view.score === undefined && resultsIn === null) {
     return (
       <Notice
-        title={celebrate ? 'Selamat, kamu sudah selesai! 🎉' : 'Ujian dikumpulkan otomatis'}
+        title={title}
         body="Jawaban terkirim. Nilai akan muncul di halaman ini setelah panitia menutup sesi dan semua peserta selesai. Biarkan halaman ini terbuka, atau buka lagi QR/link ujian nanti."
       >
         {celebrate && <Confetti />}
+      </Notice>
+    )
+  }
+  if (view.score === undefined) {
+    return (
+      <Notice title={title} body="Jawaban terkirim. Nilai semua peserta muncul serentak dalam">
+        {celebrate && <Confetti />}
+        <p className="font-mono text-5xl font-bold" aria-live="polite">
+          {clock(resultsIn ?? 0)}
+        </p>
+        <p className="text-sm text-muted">
+          {resultsIn ? 'Menunggu peserta lain menyelesaikan ujian. Biarkan halaman ini terbuka.' : 'Mengambil nilai…'}
+        </p>
       </Notice>
     )
   }

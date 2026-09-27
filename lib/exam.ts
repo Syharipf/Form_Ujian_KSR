@@ -70,8 +70,15 @@ export interface ExamView {
   total: number
   questions: PublicQuestion[]
   answers: Record<string, number> // question id → display index (total mode only)
-  score?: number // only present once results are released (see scoresReleased in attempts.ts)
+  score?: number // only present once results are released (see resultsStatus in attempts.ts)
+  results_at: number | null // submitted, not yet released: when scores appear for everyone (null = session still open)
 }
+
+export interface ResultsStatus {
+  released: boolean
+  at: number | null
+}
+const NOT_RELEASED: ResultsStatus = { released: false, at: null }
 
 export class ExamError extends Error {
   constructor(
@@ -148,8 +155,8 @@ export function planAnswer(a: Attempt, s: Session, questionId: string) {
   return { expectIndex: a.current_index, nextIndex: a.current_index }
 }
 
-// `released`: the caller decided this participant may see their own score (session over).
-export function buildView(a: Attempt, s: Session, questions: Record<string, Question>, now: Date, released = false): ExamView {
+// `results`: whether this participant may see their own score yet (session over), and when that happens.
+export function buildView(a: Attempt, s: Session, questions: Record<string, Question>, now: Date, results = NOT_RELEASED): ExamView {
   const submitted = a.submitted_at !== null
   const perQuestion = s.timer_mode === 'per_question'
   const ids = submitted ? [] : perQuestion ? a.question_order.slice(a.current_index, a.current_index + 1) : a.question_order
@@ -175,6 +182,7 @@ export function buildView(a: Attempt, s: Session, questions: Record<string, Ques
       return { id, type: q.type, text: q.text, options: a.option_orders[id].map((i) => q.options[i]) }
     }),
     answers,
-    ...(submitted && released && a.score !== null ? { score: a.score } : {}),
+    results_at: submitted && !results.released ? results.at : null,
+    ...(submitted && results.released && a.score !== null ? { score: a.score } : {}),
   }
 }
