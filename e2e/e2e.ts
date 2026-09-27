@@ -200,28 +200,30 @@ try {
   log('compare page joins pre/post by NIM with delta')
 
   // --- closed session and score release -------------------------------------------
-  // Budi is still working (per-question, 4 × 5 s) when the session closes, so scores stay hidden.
+  // Budi is still working (per-question, 4 × 5 s) when the session closes and never answers, so
+  // scores stay hidden until his time runs out; then everyone's score appears together.
   const late = await participant(browser, post.code, 'Budi', '1004')
   await adminPage.goto(post.url)
-  await adminPage.click('text=Tutup sesi')
+  await adminPage.getByRole('button', { name: 'Tutup sesi', exact: true }).click()
   await adminPage.getByText('Sesi ditutup —').waitFor()
   await adminPage.getByText('1 peserta masih mengerjakan').waitFor()
   await p.page.reload()
-  await p.page.getByText('Nilai akan muncul di halaman ini').waitFor()
+  await p.page.getByText('Nilai semua peserta muncul serentak dalam').waitFor()
+  assert.match(await p.page.locator('main p.font-mono').innerText(), /^0:[0-2]\d$/)
   assert.ok(p.views.every((v) => !v.includes('"score"')))
+  log('after closing, a finished participant sees a countdown to the shared release time')
 
-  // Budi answers whatever question is current until done (a slow step may let one time out).
-  while (!(await late.page.getByText('Jawaban terkirim').or(late.page.getByText('Nilaimu')).isVisible())) {
-    await late.page.locator('main button').first().click({ timeout: 2000 }).catch(() => {})
-    await late.page.locator('main button', { hasText: /^Jawab & / }).click({ timeout: 2000 }).catch(() => {})
+  // No reloads from here: both pages must pick the score up on their own.
+  const shown = async (page: Page) => {
+    await page.getByText('Nilaimu').waitFor({ timeout: 35_000 })
+    return Date.now()
   }
-  await late.page.getByText('Nilaimu').waitFor() // the last one to finish sees the score right away
-  await p.page.reload()
-  await p.page.getByText('Nilaimu').waitFor()
+  const [aniAt, budiAt] = await Promise.all([shown(p.page), shown(late.page)])
+  assert.ok(Math.abs(aniAt - budiAt) < 4000, `scores appeared ${Math.abs(aniAt - budiAt)} ms apart`)
   assert.equal(await p.page.locator('main p.text-6xl').innerText(), '75')
   await adminPage.reload()
   await adminPage.getByText('Nilai sudah terlihat oleh peserta').waitFor()
-  log('score is shown only after the session is closed and the last participant finishes')
+  log('when the countdown ends, every participant sees their score at about the same time')
 
   const closed = await (await browser.newContext()).newPage()
   await closed.goto(`${BASE}/s/${post.code}`)
