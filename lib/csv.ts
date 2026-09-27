@@ -8,8 +8,9 @@ export interface ParsedQuestion {
   answer_index: number
 }
 
-const TYPES: Record<string, 'mc' | 'tf'> = { mc: 'mc', pg: 'mc', tf: 'tf', bs: 'tf' }
-const TF_ANSWERS: Record<string, number> = { b: 0, benar: 0, s: 1, salah: 1 }
+// Maps, not object literals: a lookup like TYPES['constructor'] must miss, not hit Object.prototype.
+const TYPES = new Map<string, 'mc' | 'tf'>([['mc', 'mc'], ['pg', 'mc'], ['tf', 'tf'], ['bs', 'tf']])
+const TF_ANSWERS = new Map([['b', 0], ['benar', 0], ['s', 1], ['salah', 1]])
 const LETTERS = ['a', 'b', 'c', 'd', 'e']
 
 export type QuestionInput = { type: string; text: string; options: string[]; answer: string }
@@ -17,7 +18,7 @@ export type QuestionInput = { type: string; text: string; options: string[]; ans
 // Validate one question in the CSV's vocabulary (type mc/pg/tf/bs, answer letter or B/S).
 // Shared by the CSV upload and the manual question form. Returns an error message on failure.
 export function toQuestion({ type: rawType, text, options, answer: rawAnswer }: QuestionInput): Omit<ParsedQuestion, 'position'> | string {
-  const type = TYPES[rawType.trim().toLowerCase()]
+  const type = TYPES.get(rawType.trim().toLowerCase())
   const answer = rawAnswer.trim().toLowerCase()
   text = text.trim()
 
@@ -25,7 +26,7 @@ export function toQuestion({ type: rawType, text, options, answer: rawAnswer }: 
   if (!text) return 'question kosong'
 
   if (type === 'tf') {
-    const answer_index = TF_ANSWERS[answer]
+    const answer_index = TF_ANSWERS.get(answer)
     if (answer_index === undefined) return 'answer untuk tf harus B (benar) atau S (salah)'
     return { type, text, options: ['Benar', 'Salah'], answer_index }
   }

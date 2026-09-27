@@ -61,4 +61,9 @@ describe('toQuestion (manual form)', () => {
     })
     expect(toQuestion({ type: 'mc', text: 'Soal', options: ['X', '', 'Z'], answer: 'A' })).toBe('opsi harus diisi berurutan mulai dari a (minimal 2)')
   })
+
+  it('does not treat Object.prototype keys as valid type or answer', () => {
+    expect(toQuestion({ type: 'constructor', text: 'Soal', options: [], answer: 'B' })).toBe('type harus mc/pg atau tf/bs')
+    expect(toQuestion({ type: 'tf', text: 'Soal', options: [], answer: 'toString' })).toBe('answer untuk tf harus B (benar) atau S (salah)')
+  })
 })
