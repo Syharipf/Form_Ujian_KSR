@@ -1,6 +1,6 @@
 import type { Session } from '@/lib/exam'
 
-const input = 'rounded border border-slate-300 bg-white p-2'
+const input = 'rounded border border-line-strong bg-surface p-2'
 
 export default function SessionForm({
   action,

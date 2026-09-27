@@ -26,28 +26,28 @@ export default async function AdminHome() {
 
       <section>
         <h2 className="mb-2 font-semibold">Sesi ujian</h2>
-        <ul className="divide-y divide-slate-200 rounded border border-slate-200 bg-white">
+        <ul className="divide-y divide-line rounded border border-line bg-surface">
           {sessions.map((s) => (
             <li key={s.id}>
-              <Link href={`/admin/sessions/${s.id}`} className="flex items-center justify-between gap-3 p-3 hover:bg-slate-50">
+              <Link href={`/admin/sessions/${s.id}`} className="flex items-center justify-between gap-3 p-3 hover:bg-page">
                 <span>
                   {s.title}{' '}
-                  <span className="text-sm text-slate-500">
+                  <span className="text-sm text-muted">
                     ({s.kind === 'pre' ? 'Pre' : 'Post'} · {s.code})
                   </span>
                 </span>
-                <span className={`text-sm ${s.is_open ? 'text-green-700' : 'text-slate-500'}`}>{s.is_open ? 'Dibuka' : 'Ditutup'}</span>
+                <span className={`text-sm ${s.is_open ? 'text-ok' : 'text-muted'}`}>{s.is_open ? 'Dibuka' : 'Ditutup'}</span>
               </Link>
             </li>
           ))}
-          {!sessions.length && <li className="p-3 text-slate-500">Belum ada sesi.</li>}
+          {!sessions.length && <li className="p-3 text-muted">Belum ada sesi.</li>}
         </ul>
         <Link href="/admin/compare" className="mt-2 inline-block text-sm underline">
           Bandingkan pre-test vs post-test →
         </Link>
       </section>
 
-      <section className="rounded border border-slate-200 bg-white p-4">
+      <section className="rounded border border-line bg-surface p-4">
         <h2 className="mb-3 font-semibold">Buat sesi baru</h2>
         <SessionForm action={createSession} submitLabel="Buat sesi" />
       </section>

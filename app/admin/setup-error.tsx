@@ -6,15 +6,15 @@ export default function SetupError({ error }: { error: unknown }) {
 
   return (
     <main className="mx-auto max-w-2xl space-y-4 p-4">
-      <h1 className="text-xl font-bold text-red-700">Database belum bisa diakses</h1>
+      <h1 className="text-xl font-bold text-danger">Database belum bisa diakses</h1>
       <p>Login berhasil, tapi server gagal membaca data dari Supabase. Pesan dari server:</p>
-      <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded border border-red-200 bg-red-50 p-3 text-sm">
+      <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded border border-danger-line bg-danger-soft p-3 text-sm">
         {message}
         {e.code && `\nKode: ${e.code}`}
         {e.details && `\nDetail: ${e.details}`}
         {e.hint && `\nPetunjuk: ${e.hint}`}
       </pre>
-      <div className="rounded border border-slate-200 bg-white p-4 text-sm">
+      <div className="rounded border border-line bg-surface p-4 text-sm">
         <h2 className="mb-2 font-semibold">Yang perlu dicek</h2>
         <ul className="list-disc space-y-1 pl-5">
           <li>
