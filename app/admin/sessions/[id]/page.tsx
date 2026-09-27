@@ -31,8 +31,8 @@ const time = (iso: string) =>
 function scoreStatus(isOpen: boolean, working: Attempt[]) {
   if (isOpen) return 'Nilai belum terlihat peserta. Nilai muncul serentak setelah sesi ditutup dan semua peserta selesai.'
   if (working.length) {
-    const last = working.reduce((a, b) => (a.deadline_at > b.deadline_at ? a : b))
-    return `Nilai belum terlihat peserta: ${working.length} peserta masih mengerjakan. Nilai muncul serentak paling lambat pukul ${time(last.deadline_at)} WIB.`
+    const last = working.reduce((max, a) => (a.deadline_at > max ? a.deadline_at : max), working[0].deadline_at)
+    return `Nilai belum terlihat peserta: ${working.length} peserta masih mengerjakan. Nilai muncul serentak paling lambat pukul ${time(last)} WIB.`
   }
   return 'Nilai sudah terlihat oleh peserta di HP masing-masing.'
 }

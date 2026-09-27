@@ -53,6 +53,20 @@ const clock = (ms: number) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
 
+// Submitted but score not released yet: check back until it is (re-armed after every check, even a
+// failed one), waking exactly at the shared release moment when it is near.
+function useResultChecks(view: ExamView | null, offset: number, refresh: () => Promise<unknown>) {
+  const [checks, setChecks] = useState(0)
+  const waiting = view?.status === 'submitted' && view.score === undefined
+  const resultsAt = view?.results_at ?? null
+  useEffect(() => {
+    if (!waiting) return
+    const delay = nextResultCheck(resultsAt === null ? null : resultsAt - (Date.now() + offset))
+    const t = setTimeout(() => refresh().finally(() => setChecks((n) => n + 1)), delay)
+    return () => clearTimeout(t)
+  }, [waiting, resultsAt, offset, refresh, checks])
+}
+
 export default function ExamClient({ id }: { id: string }) {
   const base = `/api/attempts/${id}`
   const [view, setView] = useState<ExamView | null>(null)
@@ -147,22 +161,11 @@ export default function ExamClient({ id }: { id: string }) {
     forget(id, true)
   }, [view, id])
 
-  // Submitted but score not released yet: check back (re-armed after every check, even a failed one).
-  const [resultChecks, setResultChecks] = useState(0)
-  const waitingForScore = view?.status === 'submitted' && view.score === undefined
-  const resultsAt = view?.results_at ?? null
-  useEffect(() => {
-    if (!waitingForScore) return
-    const delay = nextResultCheck(resultsAt === null ? null : resultsAt - (Date.now() + offset))
-    const t = setTimeout(() => refresh().finally(() => setResultChecks((n) => n + 1)), delay)
-    return () => clearTimeout(t)
-  }, [waitingForScore, resultsAt, offset, refresh, resultChecks])
+  useResultChecks(view, offset, refresh)
 
   if (fatal) return <Notice title="Tidak bisa membuka ujian" body={fatal.message} />
   if (!view) return <Notice title="Memuat ujian…" />
-  if (view.status === 'submitted') {
-    return <Submitted view={view} resultsIn={view.results_at === null ? null : Math.max(0, view.results_at - (now + offset))} />
-  }
+  if (view.status === 'submitted') return <Submitted view={view} serverNow={now + offset} />
 
   // Answers and submit run one at a time so each response includes every earlier answer,
   // and a quick "Kumpulkan" never overtakes the last pick. Only the final response is applied,
@@ -297,8 +300,9 @@ export default function ExamClient({ id }: { id: string }) {
   )
 }
 
-// `resultsIn`: ms until scores are released for everyone (null while the session is still open).
-function Submitted({ view, resultsIn }: Readonly<{ view: ExamView; resultsIn: number | null }>) {
+function Submitted({ view, serverNow }: Readonly<{ view: ExamView; serverNow: number }>) {
+  // ms until scores are released for everyone (null while the session is still open)
+  const resultsIn = view.results_at === null ? null : Math.max(0, view.results_at - serverNow)
   if (view.score === undefined && resultsIn === null) {
     return (
       <Notice
