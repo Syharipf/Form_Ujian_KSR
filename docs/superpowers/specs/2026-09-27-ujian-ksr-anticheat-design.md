@@ -63,6 +63,7 @@ Lapisan anti-cheat:
 - Selesai → keluar fullscreen, tampil halaman "Terima kasih" (nilai tidak ditampilkan ke peserta).
 
 ### Admin (`/admin`)
+- Semua operasi panitia lewat web `/admin`, bisa dibuka di laptop maupun HP (layout responsif). Dashboard Supabase hanya dipakai sekali saat setup awal (jalankan `schema.sql`).
 - Login: `ADMIN_PASSWORD` env → cookie httpOnly bertanda HMAC.
 - Kelola sesi: buat/edit pengaturan, buka/tutup, reset attempt peserta, tampilkan QR + link sesi.
 - Upload soal CSV (`papaparse`): `type,question,a,b,c,d,e,answer` (answer huruf; tf pakai B/S). Excel → simpan sebagai CSV.
