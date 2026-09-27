@@ -1,6 +1,6 @@
 // End-to-end run against the local stand-in (PGlite + PostgREST) and `next dev` on :3100.
 // Start everything with `bun run e2e` (see e2e/run.sh).
-import { chromium, devices, type Browser, type Page } from 'playwright-core'
+import { chromium, devices, type Browser, type Page, type Route } from 'playwright-core'
 import assert from 'node:assert/strict'
 
 const BASE = 'http://localhost:3100'
@@ -22,11 +22,11 @@ async function admin(browser: Browser) {
   await page.goto(`${BASE}/admin`)
   assert.match(page.url(), /\/admin\/login/)
   await page.fill('input[name=password]', 'salah')
-  await page.click('button:text-is("Masuk")')
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click()
   await page.waitForURL(/error=1/)
   await page.getByText('Password salah.').waitFor()
   await page.fill('input[name=password]', 'rahasia-e2e')
-  await page.click('button:text-is("Masuk")')
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click()
   await page.waitForURL(`${BASE}/admin`)
   log('admin login rejects wrong password, accepts right one')
   return page
@@ -39,7 +39,7 @@ async function createSession(page: Page, title: string, kind: 'pre' | 'post', mo
   await page.selectOption('select[name=timer_mode]', mode)
   await page.fill('input[name=duration_min]', '10')
   await page.fill('input[name=per_question_sec]', String(perQuestion))
-  await page.click('button:text-is("Buat sesi")')
+  await page.getByRole('button', { name: 'Buat sesi', exact: true }).click()
   await page.waitForURL(/\/admin\/sessions\//)
   const code = (await page.locator('text=/kode [A-Z0-9]{6}/').innerText()).match(/kode ([A-Z0-9]{6})/)![1]
   await page.click('summary:has-text("Upload CSV")')
@@ -92,7 +92,7 @@ try {
   // no pause: submit must queue behind the in-flight answers
   await a.page.click('text=Kumpulkan jawaban')
   await a.page.getByText('4 dari 4 soal terjawab').waitFor()
-  await a.page.click('button:text-is("Kumpulkan")')
+  await a.page.getByRole('button', { name: 'Kumpulkan', exact: true }).click()
   await a.page.getByText('Jawaban terkirim').waitFor()
   assert.ok(a.views.length > 0 && a.views.every((v) => !v.includes('answer_index') && !v.includes('"score"')))
   log('total mode: answer all, confirm, submit; API never sent answer key or score')
@@ -239,7 +239,7 @@ try {
   // --- manual questions ----------------------------------------------------------
   await adminPage.goto(`${BASE}/admin`)
   await adminPage.fill('input[name=title]', 'Manual E2E')
-  await adminPage.click('button:text-is("Buat sesi")')
+  await adminPage.getByRole('button', { name: 'Buat sesi', exact: true }).click()
   await adminPage.waitForURL(/\/admin\/sessions\//)
   const addForm = adminPage.locator('details:has(summary:has-text("Tambah soal manual")) form')
   await addForm.locator('textarea[name=question]').fill('Warna bendera PMI?')
@@ -264,7 +264,7 @@ try {
   await first.locator('summary:has-text("Edit")').click()
   await first.locator('input[name=a]').fill('Merah')
   await first.locator('select[name=answer]').selectOption('A')
-  await first.locator('button:text-is("Simpan soal")').click()
+  await first.getByRole('button', { name: 'Simpan soal', exact: true }).click()
   await adminPage.getByText('Soal diperbarui').waitFor()
   assert.match(await adminPage.locator('ol > li').first().innerText(), /A\. Merah ✓/)
   adminPage.once('dialog', (dlg) => dlg.accept())
@@ -298,6 +298,32 @@ try {
   assert.equal(await theme(), 'system')
   assert.equal(await surface(), lightBg)
   log('theme toggle switches to dark, survives reload, and returns to following the device')
+
+  // --- pending feedback ------------------------------------------------------------
+  // Slow the server down so the delayed spinner has time to appear.
+  const slow = (ms: number) => async (route: Route) => {
+    await sleep(ms)
+    await route.continue().catch(() => {})
+  }
+  const spinner = (page: Page) => page.locator('button[aria-busy="true"] svg.animate-spin')
+
+  const joiner = await (await browser.newContext({ ...devices['Pixel 7'] })).newPage()
+  await joiner.route('**/api/attempts', slow(1500))
+  await joiner.goto(`${BASE}/s/${pre.code}`)
+  await joiner.fill('input[name=name]', 'Dodi')
+  await joiner.fill('input[name=nim]', '1005')
+  await joiner.click('text=Mulai ujian')
+  await spinner(joiner).waitFor({ state: 'visible' })
+  assert.ok(await joiner.locator('button[aria-busy="true"]').isDisabled())
+  await joiner.waitForURL(/\/exam\//)
+  log('participant start button shows a spinner and is disabled while the request is slow')
+
+  await adminPage.goto(`${BASE}/admin`)
+  await adminPage.route(`${BASE}/admin`, (route) => (route.request().method() === 'POST' ? slow(1500)(route) : route.continue()))
+  await adminPage.getByRole('button', { name: 'Keluar', exact: true }).click()
+  await spinner(adminPage).waitFor({ state: 'visible' })
+  await adminPage.waitForURL(/\/admin\/login/)
+  log('admin server-action button shows a spinner while the action is slow')
 
   console.log('\nALL E2E CHECKS PASSED')
 } catch (e) {

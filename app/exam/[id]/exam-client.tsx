@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import Notice from '@/app/notice'
+import { PendingLabel } from '@/app/pending'
 import ThemeToggle from '@/app/theme-toggle'
 import { GRACE_MS, type ExamView, type PublicQuestion } from '@/lib/exam'
 import { enterFullscreen, exitFullscreen, isFullscreen, subscribeFullscreen } from '@/lib/fullscreen'
@@ -147,22 +148,7 @@ export default function ExamClient({ id }: { id: string }) {
 
   if (fatal) return <Notice title="Tidak bisa membuka ujian" body={fatal.message} />
   if (!view) return <Notice title="Memuat ujian…" />
-  if (view.status === 'submitted') {
-    if (view.score !== undefined) {
-      return (
-        <Notice title={view.title} body={`${view.name} · ${view.nim}`}>
-          <p className="mt-4 text-sm text-muted">Nilaimu</p>
-          <p className="text-6xl font-bold">{view.score}</p>
-        </Notice>
-      )
-    }
-    return (
-      <Notice
-        title="Jawaban terkirim"
-        body="Nilai akan muncul di halaman ini setelah panitia menutup sesi dan semua peserta selesai. Biarkan halaman ini terbuka, atau buka lagi QR/link ujian nanti."
-      />
-    )
-  }
+  if (view.status === 'submitted') return <Submitted view={view} />
 
   // Answers and submit run one at a time so each response includes every earlier answer,
   // and a quick "Kumpulkan" never overtakes the last pick. Only the final response is applied,
@@ -238,9 +224,10 @@ export default function ExamClient({ id }: { id: string }) {
               <button
                 disabled={pickedChoice === null || busy}
                 onClick={() => pickedChoice !== null && answerCurrent(current.id, pickedChoice)}
-                className="w-full rounded bg-red-600 p-3 font-semibold text-white disabled:opacity-40"
+                aria-busy={busy}
+                className={`relative w-full rounded bg-red-600 p-3 font-semibold text-white ${pickedChoice === null ? 'opacity-40' : ''}`}
               >
-                {view.current_index + 1 === view.total ? 'Jawab & selesai' : 'Jawab & lanjut'}
+                <PendingLabel pending={busy}>{view.current_index + 1 === view.total ? 'Jawab & selesai' : 'Jawab & lanjut'}</PendingLabel>
               </button>
             </section>
           )
@@ -261,8 +248,8 @@ export default function ExamClient({ id }: { id: string }) {
                   <button onClick={() => setConfirming(false)} className="flex-1 rounded border border-line-strong bg-surface p-3">
                     Batal
                   </button>
-                  <button disabled={busy} onClick={submit} className="flex-1 rounded bg-red-600 p-3 font-semibold text-white disabled:opacity-50">
-                    Kumpulkan
+                  <button disabled={busy} aria-busy={busy} onClick={submit} className="relative flex-1 rounded bg-red-600 p-3 font-semibold text-white">
+                    <PendingLabel pending={busy}>Kumpulkan</PendingLabel>
                   </button>
                 </div>
               </div>
@@ -293,6 +280,23 @@ export default function ExamClient({ id }: { id: string }) {
         </div>
       )}
     </div>
+  )
+}
+
+function Submitted({ view }: Readonly<{ view: ExamView }>) {
+  if (view.score === undefined) {
+    return (
+      <Notice
+        title="Jawaban terkirim"
+        body="Nilai akan muncul di halaman ini setelah panitia menutup sesi dan semua peserta selesai. Biarkan halaman ini terbuka, atau buka lagi QR/link ujian nanti."
+      />
+    )
+  }
+  return (
+    <Notice title={view.title} body={`${view.name} · ${view.nim}`}>
+      <p className="mt-4 text-sm text-muted">Nilaimu</p>
+      <p className="text-6xl font-bold">{view.score}</p>
+    </Notice>
   )
 }
 

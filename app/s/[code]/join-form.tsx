@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useSyncExternalStore } from 'react'
+import { useState, useSyncExternalStore, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Session } from '@/lib/exam'
+import { PendingLabel } from '@/app/pending'
 import ThemeToggle from '@/app/theme-toggle'
 import { enterFullscreen, exitFullscreen } from '@/lib/fullscreen'
 import ResultLink from './result-link'
@@ -25,11 +26,12 @@ export default function JoinForm({ session }: Props) {
   const key = `attempt:${session.code}`
   const existing = useSyncExternalStore(noSubscribe, () => stored(key), () => null)
   const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState(false) // stays true through the navigation to the exam
+  const [resuming, startResume] = useTransition()
 
   function resume() {
     enterFullscreen()
-    router.push(`/exam/${existing}`)
+    startResume(() => router.push(`/exam/${existing}`))
   }
 
   async function start(e: React.FormEvent<HTMLFormElement>) {
@@ -91,8 +93,8 @@ export default function JoinForm({ session }: Props) {
       <ResultLink code={session.code} />
 
       {existing ? (
-        <button onClick={resume} className="w-full rounded bg-red-600 p-3 font-semibold text-white">
-          Lanjutkan ujian
+        <button onClick={resume} disabled={resuming} aria-busy={resuming} className="relative w-full rounded bg-red-600 p-3 font-semibold text-white">
+          <PendingLabel pending={resuming}>Lanjutkan ujian</PendingLabel>
         </button>
       ) : (
         <form onSubmit={start} className="space-y-3">
@@ -105,8 +107,8 @@ export default function JoinForm({ session }: Props) {
             <input name="nim" required maxLength={30} className="rounded border border-line-strong p-3 text-base" />
           </label>
           {error && <p className="text-sm text-danger">{error}</p>}
-          <button disabled={busy} className="w-full rounded bg-red-600 p-3 font-semibold text-white disabled:opacity-50">
-            {busy ? 'Memulai…' : 'Mulai ujian'}
+          <button type="submit" disabled={busy} aria-busy={busy} className="relative w-full rounded bg-red-600 p-3 font-semibold text-white">
+            <PendingLabel pending={busy}>Mulai ujian</PendingLabel>
           </button>
         </form>
       )}

@@ -7,7 +7,8 @@ import { finalizeExpired } from '@/lib/attempts'
 import { db, must } from '@/lib/db'
 import type { Attempt, Question, Session } from '@/lib/exam'
 import { deleteQuestion, resetAllAttempts, resetAttempt, saveQuestion, setOpen, updateSession, uploadQuestions } from '../../actions'
-import ConfirmButton from '../../confirm-button'
+import LinkPending from '@/app/link-pending'
+import SubmitButton from '@/app/submit-button'
 import QuestionForm from '../../question-form'
 import SessionForm from '../../session-form'
 
@@ -64,7 +65,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
     <main className="mx-auto max-w-4xl space-y-8 p-4">
       <header>
         <Link href="/admin" className="text-sm underline">
-          ← Semua sesi
+          ← Semua sesi <LinkPending />
         </Link>
         <h1 className="mt-1 text-xl font-bold">{session.title}</h1>
         <p className="text-sm text-muted">
@@ -87,7 +88,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
             {scoreStatus(session.is_open, attempts.filter((a) => !a.submitted_at).length)}
           </p>
           <form action={setOpen.bind(null, id, !session.is_open)}>
-            <button className="rounded bg-red-600 px-4 py-2 font-semibold text-white">{session.is_open ? 'Tutup sesi' : 'Buka sesi'}</button>
+            <SubmitButton className="rounded bg-red-600 px-4 py-2 font-semibold text-white">{session.is_open ? 'Tutup sesi' : 'Buka sesi'}</SubmitButton>
           </form>
         </div>
       </section>
@@ -119,9 +120,9 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
                     </div>
                   </details>
                   <form action={deleteQuestion.bind(null, id, q.id)}>
-                    <ConfirmButton message={`Hapus soal ${i + 1}?`} className="text-xs text-danger underline">
+                    <SubmitButton confirm={`Hapus soal ${i + 1}?`} className="text-xs text-danger underline">
                       Hapus
-                    </ConfirmButton>
+                    </SubmitButton>
                   </form>
                 </div>
               )}
@@ -145,14 +146,14 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
                 {/* No accept filter: Android often labels .csv with other MIME types and greys the file out. */}
                 <input type="file" name="file" required className="min-w-0 text-sm" />
                 {questions.length ? (
-                  <ConfirmButton
-                    message={`Upload akan MENGGANTI ${questions.length} soal yang ada. Lanjutkan?`}
+                  <SubmitButton
+                    confirm={`Upload akan MENGGANTI ${questions.length} soal yang ada. Lanjutkan?`}
                     className="rounded border border-line-strong px-4 py-2 text-sm"
                   >
                     Upload &amp; ganti semua soal
-                  </ConfirmButton>
+                  </SubmitButton>
                 ) : (
-                  <button className="rounded border border-line-strong px-4 py-2 text-sm">Upload &amp; ganti semua soal</button>
+                  <SubmitButton className="rounded border border-line-strong px-4 py-2 text-sm">Upload &amp; ganti semua soal</SubmitButton>
                 )}
               </form>
               <p className="mt-2 text-sm text-muted">
@@ -180,12 +181,12 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
               Export CSV
             </a>
             <form action={resetAllAttempts.bind(null, id)}>
-              <ConfirmButton
-                message="Hapus SEMUA peserta beserta jawabannya di sesi ini?"
+              <SubmitButton
+                confirm="Hapus SEMUA peserta beserta jawabannya di sesi ini?"
                 className="rounded border border-danger-line bg-surface px-3 py-1.5 text-sm text-danger"
               >
                 Reset semua
-              </ConfirmButton>
+              </SubmitButton>
             </form>
           </div>
         </div>
@@ -226,9 +227,9 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
                   <td className="p-2">{a.submit_reason ? STATUS[a.submit_reason] : 'Mengerjakan'}</td>
                   <td className="p-2">
                     <form action={resetAttempt.bind(null, id, a.id)}>
-                      <ConfirmButton message={`Reset ${a.name}? Jawabannya dihapus dan peserta ini bisa mulai ulang.`} className="text-xs text-danger underline">
+                      <SubmitButton confirm={`Reset ${a.name}? Jawabannya dihapus dan peserta ini bisa mulai ulang.`} className="text-xs text-danger underline">
                         Reset
-                      </ConfirmButton>
+                      </SubmitButton>
                     </form>
                   </td>
                 </tr>

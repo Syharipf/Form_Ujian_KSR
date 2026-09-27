@@ -1,4 +1,7 @@
+import Form from 'next/form'
 import Link from 'next/link'
+import LinkPending from '@/app/link-pending'
+import SubmitButton from '@/app/submit-button'
 import { requireAdmin } from '@/lib/admin-auth'
 import { finalizeExpired } from '@/lib/attempts'
 import { db, must } from '@/lib/db'
@@ -41,16 +44,16 @@ export default async function ComparePage(props: PageProps<'/admin/compare'>) {
     <main className="mx-auto max-w-3xl space-y-6 p-4">
       <header>
         <Link href="/admin" className="text-sm underline">
-          ← Semua sesi
+          ← Semua sesi <LinkPending />
         </Link>
         <h1 className="mt-1 text-xl font-bold">Bandingkan pre-test vs post-test</h1>
       </header>
 
-      <form className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]">
+      <Form action="/admin/compare" className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]">
         {picker('pre', pre)}
         {picker('post', post)}
-        <button className="rounded bg-red-600 px-4 py-2 font-semibold text-white">Bandingkan</button>
-      </form>
+        <SubmitButton className="rounded bg-red-600 px-4 py-2 font-semibold text-white">Bandingkan</SubmitButton>
+      </Form>
 
       {result && (
         <>

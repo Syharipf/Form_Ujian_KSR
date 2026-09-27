@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useSyncExternalStore } from 'react'
+import LinkPending from '@/app/link-pending'
 
 const noSubscribe = () => () => {}
 function stored(key: string) {
@@ -19,7 +20,7 @@ export default function ResultLink({ code }: Readonly<{ code: string }>) {
   if (!id) return null
   return (
     <Link href={`/exam/${id}`} className="block w-full rounded border border-line-strong bg-surface p-3 text-center font-semibold">
-      Lihat nilai ujianmu
+      Lihat nilai ujianmu <LinkPending />
     </Link>
   )
 }

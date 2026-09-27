@@ -1,3 +1,4 @@
+import SubmitButton from '@/app/submit-button'
 import type { Session } from '@/lib/exam'
 
 const input = 'rounded border border-line-strong bg-surface p-2'
@@ -44,7 +45,7 @@ export default function SessionForm({
         <input type="number" name="max_violations" min={1} max={20} required defaultValue={session?.max_violations ?? 3} className={input} />
       </label>
       <div className="flex items-end">
-        <button className="w-full rounded bg-red-600 p-2 font-semibold text-white">{submitLabel}</button>
+        <SubmitButton className="w-full rounded bg-red-600 p-2 font-semibold text-white">{submitLabel}</SubmitButton>
       </div>
     </form>
   )
