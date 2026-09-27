@@ -26,11 +26,14 @@ const VIOLATION: Record<string, string> = {
 const time = (iso: string) =>
   new Date(iso).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
-// Mirrors scoresReleased() in lib/attempts.ts: participants see their score only after the
-// session is closed and nobody is still working.
-function scoreStatus(isOpen: boolean, working: number) {
-  if (isOpen) return 'Nilai belum terlihat peserta. Nilai muncul setelah sesi ditutup dan semua peserta selesai.'
-  if (working) return `Nilai belum terlihat peserta: ${working} peserta masih mengerjakan.`
+// Mirrors resultsStatus() in lib/attempts.ts: participants see their score only after the session
+// is closed and nobody is still working; until then they count down to the last deadline.
+function scoreStatus(isOpen: boolean, working: Attempt[]) {
+  if (isOpen) return 'Nilai belum terlihat peserta. Nilai muncul serentak setelah sesi ditutup dan semua peserta selesai.'
+  if (working.length) {
+    const last = working.reduce((a, b) => (a.deadline_at > b.deadline_at ? a : b))
+    return `Nilai belum terlihat peserta: ${working.length} peserta masih mengerjakan. Nilai muncul serentak paling lambat pukul ${time(last.deadline_at)} WIB.`
+  }
   return 'Nilai sudah terlihat oleh peserta di HP masing-masing.'
 }
 
@@ -85,7 +88,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
             {session.is_open ? 'Sesi dibuka — peserta bisa mulai.' : 'Sesi ditutup — peserta belum bisa mulai.'}
           </p>
           <p className="text-sm text-muted">
-            {scoreStatus(session.is_open, attempts.filter((a) => !a.submitted_at).length)}
+            {scoreStatus(session.is_open, attempts.filter((a) => !a.submitted_at))}
           </p>
           <form action={setOpen.bind(null, id, !session.is_open)}>
             <SubmitButton className="rounded bg-red-600 px-4 py-2 font-semibold text-white">{session.is_open ? 'Tutup sesi' : 'Buka sesi'}</SubmitButton>

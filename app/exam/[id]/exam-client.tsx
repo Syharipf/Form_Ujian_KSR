@@ -38,6 +38,15 @@ function forget(id: string, submitted = false) {
 }
 
 const RESULT_POLL_MS = 15_000
+const RESULT_RETRY_MS = 2_000
+
+// While waiting for scores: poll every RESULT_POLL_MS, but once the release moment is closer than
+// that, wake exactly at it so every participant's score appears at the same time.
+function nextResultCheck(untilRelease: number | null) {
+  if (untilRelease === null || untilRelease > RESULT_POLL_MS) return RESULT_POLL_MS
+  if (untilRelease > 0) return untilRelease
+  return RESULT_RETRY_MS
+}
 
 const clock = (ms: number) => {
   const s = Math.ceil(ms / 1000)
@@ -138,17 +147,22 @@ export default function ExamClient({ id }: { id: string }) {
     forget(id, true)
   }, [view, id])
 
-  // Submitted but score not released yet: check back until the session is over.
+  // Submitted but score not released yet: check back (re-armed after every check, even a failed one).
+  const [resultChecks, setResultChecks] = useState(0)
   const waitingForScore = view?.status === 'submitted' && view.score === undefined
+  const resultsAt = view?.results_at ?? null
   useEffect(() => {
     if (!waitingForScore) return
-    const t = setInterval(refresh, RESULT_POLL_MS)
-    return () => clearInterval(t)
-  }, [waitingForScore, refresh])
+    const delay = nextResultCheck(resultsAt === null ? null : resultsAt - (Date.now() + offset))
+    const t = setTimeout(() => refresh().finally(() => setResultChecks((n) => n + 1)), delay)
+    return () => clearTimeout(t)
+  }, [waitingForScore, resultsAt, offset, refresh, resultChecks])
 
   if (fatal) return <Notice title="Tidak bisa membuka ujian" body={fatal.message} />
   if (!view) return <Notice title="Memuat ujian…" />
-  if (view.status === 'submitted') return <Submitted view={view} />
+  if (view.status === 'submitted') {
+    return <Submitted view={view} resultsIn={view.results_at === null ? null : Math.max(0, view.results_at - (now + offset))} />
+  }
 
   // Answers and submit run one at a time so each response includes every earlier answer,
   // and a quick "Kumpulkan" never overtakes the last pick. Only the final response is applied,
@@ -283,13 +297,26 @@ export default function ExamClient({ id }: { id: string }) {
   )
 }
 
-function Submitted({ view }: Readonly<{ view: ExamView }>) {
-  if (view.score === undefined) {
+// `resultsIn`: ms until scores are released for everyone (null while the session is still open).
+function Submitted({ view, resultsIn }: Readonly<{ view: ExamView; resultsIn: number | null }>) {
+  if (view.score === undefined && resultsIn === null) {
     return (
       <Notice
         title="Jawaban terkirim"
         body="Nilai akan muncul di halaman ini setelah panitia menutup sesi dan semua peserta selesai. Biarkan halaman ini terbuka, atau buka lagi QR/link ujian nanti."
       />
+    )
+  }
+  if (view.score === undefined) {
+    return (
+      <Notice title="Jawaban terkirim" body="Nilai semua peserta muncul serentak dalam">
+        <p className="font-mono text-5xl font-bold" aria-live="polite">
+          {clock(resultsIn ?? 0)}
+        </p>
+        <p className="text-sm text-muted">
+          {resultsIn ? 'Menunggu peserta lain menyelesaikan ujian. Biarkan halaman ini terbuka.' : 'Mengambil nilai…'}
+        </p>
+      </Notice>
     )
   }
   return (

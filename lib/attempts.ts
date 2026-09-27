@@ -1,5 +1,5 @@
 import { db, must } from './db'
-import { buildView, ExamError, grade, GRACE_MS, settle, type Attempt, type Question, type Session, type SubmitReason } from './exam'
+import { buildView, ExamError, grade, GRACE_MS, settle, type Attempt, type Question, type ResultsStatus, type Session, type SubmitReason } from './exam'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -57,19 +57,30 @@ export async function sync(ctx: Ctx, now: Date) {
   ctx.attempt = row ?? (await fetchAttempt(ctx.attempt.id))!
 }
 
-// A participant sees their score only after the session is closed AND nobody is still working,
-// so early finishers can't leak anything to those still taking the exam.
-export async function scoresReleased(session: Session) {
-  if (session.is_open) return false
+// Scores are released to everyone at once, only after the session is closed AND nobody is still
+// working, so early finishers can't leak anything to those still taking the exam. While someone is
+// still working, `at` is the latest of their deadlines: the countdown participants see.
+export async function resultsStatus(session: Session): Promise<ResultsStatus> {
+  if (session.is_open) return { released: false, at: null }
   await finalizeExpired(session.id)
-  const { count, error } = await db().from('attempts').select('id', { count: 'exact', head: true }).eq('session_id', session.id).is('submitted_at', null)
-  if (error) throw error
-  return count === 0
+  const last: { deadline_at: string } | null = must(
+    await db()
+      .from('attempts')
+      .select('deadline_at')
+      .eq('session_id', session.id)
+      .is('submitted_at', null)
+      .order('deadline_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  )
+  // finalizeExpired settles an attempt only once it is more than GRACE_MS past its deadline; release
+  // a second after that so the check made at the countdown's end finds nobody still working.
+  return last ? { released: false, at: Date.parse(last.deadline_at) + GRACE_MS + 1000 } : { released: true, at: null }
 }
 
 export async function view(ctx: Ctx, now: Date) {
-  const released = ctx.attempt.submitted_at !== null && (await scoresReleased(ctx.session))
-  return buildView(ctx.attempt, ctx.session, ctx.questions, now, released)
+  const results = ctx.attempt.submitted_at ? await resultsStatus(ctx.session) : undefined
+  return buildView(ctx.attempt, ctx.session, ctx.questions, now, results)
 }
 
 // Participants who closed the browser never trigger their own timeout; settle them for the results page.
