@@ -1,5 +1,12 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f8fafc' },
+    { media: '(prefers-color-scheme: dark)', color: '#020617' },
+  ],
+}
 
 export const metadata: Metadata = {
   title: 'Ujian KSR PMI Telkom',
@@ -10,7 +17,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="id">
-      <body className="min-h-dvh bg-slate-50 text-slate-900 antialiased">{children}</body>
+      <body className="min-h-dvh bg-page text-fg antialiased">{children}</body>
     </html>
   )
 }

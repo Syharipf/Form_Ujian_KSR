@@ -1,5 +1,58 @@
 @import "tailwindcss";
 
+/* Semantic colors that follow the device's light/dark setting. Use these (bg-surface,
+   border-line, text-muted, …) instead of raw palette colors so both themes stay in sync. */
+:root {
+  color-scheme: light dark;
+  --page: var(--color-slate-50);
+  --surface: var(--color-white);
+  --subtle: var(--color-slate-100);
+  --line: var(--color-slate-200);
+  --line-strong: var(--color-slate-300);
+  --fg: var(--color-slate-900);
+  --secondary: var(--color-slate-600);
+  --muted: var(--color-slate-500);
+  --danger: var(--color-red-600);
+  --danger-soft: var(--color-red-50);
+  --danger-line: var(--color-red-300);
+  --warn-soft: var(--color-amber-100);
+  --ok: var(--color-green-700);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: var(--color-slate-950);
+    --surface: var(--color-slate-900);
+    --subtle: var(--color-slate-800);
+    --line: var(--color-slate-800);
+    --line-strong: var(--color-slate-600);
+    --fg: var(--color-slate-100);
+    --secondary: var(--color-slate-300);
+    --muted: var(--color-slate-400);
+    --danger: var(--color-red-400);
+    --danger-soft: color-mix(in oklab, var(--color-red-600) 20%, transparent);
+    --danger-line: var(--color-red-800);
+    --warn-soft: color-mix(in oklab, var(--color-amber-500) 25%, transparent);
+    --ok: var(--color-green-400);
+  }
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-subtle: var(--subtle);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-secondary: var(--secondary);
+  --color-muted: var(--muted);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-line: var(--danger-line);
+  --color-warn-soft: var(--warn-soft);
+  --color-ok: var(--ok);
+}
+
 /* Exam page: no text selection, no long-press menu (copy / "Search with Google Lens"). */
 .no-select {
   -webkit-user-select: none;

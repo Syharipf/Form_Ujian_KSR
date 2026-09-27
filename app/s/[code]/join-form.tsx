@@ -64,11 +64,11 @@ export default function JoinForm({ session }: Props) {
   return (
     <main className="mx-auto max-w-md space-y-5 p-5">
       <header>
-        <p className="text-sm font-semibold text-red-600">KSR PMI Telkom · {session.kind === 'pre' ? 'Pre-test' : 'Post-test'}</p>
+        <p className="text-sm font-semibold text-danger">KSR PMI Telkom · {session.kind === 'pre' ? 'Pre-test' : 'Post-test'}</p>
         <h1 className="text-2xl font-bold">{session.title}</h1>
       </header>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4 text-sm">
+      <section className="rounded-lg border border-line bg-surface p-4 text-sm">
         <h2 className="mb-2 font-semibold">Aturan ujian</h2>
         <ul className="list-disc space-y-1 pl-5">
           <li>Waktu: {timer}.</li>
@@ -91,13 +91,13 @@ export default function JoinForm({ session }: Props) {
         <form onSubmit={start} className="space-y-3">
           <label className="grid gap-1 text-sm">
             Nama lengkap
-            <input name="name" required maxLength={100} autoComplete="name" className="rounded border border-slate-300 p-3 text-base" />
+            <input name="name" required maxLength={100} autoComplete="name" className="rounded border border-line-strong p-3 text-base" />
           </label>
           <label className="grid gap-1 text-sm">
             NIM
-            <input name="nim" required maxLength={30} className="rounded border border-slate-300 p-3 text-base" />
+            <input name="nim" required maxLength={30} className="rounded border border-line-strong p-3 text-base" />
           </label>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-danger">{error}</p>}
           <button disabled={busy} className="w-full rounded bg-red-600 p-3 font-semibold text-white disabled:opacity-50">
             {busy ? 'Memulai…' : 'Mulai ujian'}
           </button>

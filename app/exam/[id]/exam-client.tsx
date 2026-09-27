@@ -182,23 +182,23 @@ export default function ExamClient({ id }: { id: string }) {
     <div className="no-select min-h-dvh">
       <Watermark text={`${view.name} · ${view.nim}`} />
 
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3">
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-surface px-4 py-3">
         <div className="min-w-0">
           <p className="truncate font-semibold">{view.title}</p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted">
             Pelanggaran {view.violation_count}/{view.max_violations}
           </p>
         </div>
-        <p className={`font-mono text-lg font-bold ${remaining < 10_000 ? 'text-red-600' : ''}`}>{clock(remaining)}</p>
+        <p className={`font-mono text-lg font-bold ${remaining < 10_000 ? 'text-danger' : ''}`}>{clock(remaining)}</p>
       </header>
 
-      {notice && <p className="bg-amber-100 px-4 py-2 text-sm">{notice}</p>}
+      {notice && <p className="bg-warn-soft px-4 py-2 text-sm">{notice}</p>}
 
       <main className="mx-auto max-w-2xl space-y-6 p-4 pb-10">
         {view.timer_mode === 'per_question' ? (
           current && (
             <section className="space-y-4">
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted">
                 Soal {view.current_index + 1} dari {view.total}
               </p>
               <QuestionCard q={current} selected={pickedChoice} onPick={(choice) => setPicked({ id: current.id, choice })} />
@@ -215,17 +215,17 @@ export default function ExamClient({ id }: { id: string }) {
           <>
             {view.questions.map((q, i) => (
               <section key={q.id} className="space-y-2">
-                <p className="text-sm text-slate-500">Soal {i + 1}</p>
+                <p className="text-sm text-muted">Soal {i + 1}</p>
                 <QuestionCard q={q} selected={view.answers[q.id] ?? null} onPick={(choice) => answerTotal(q.id, choice)} />
               </section>
             ))}
             {confirming ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+              <div className="rounded-lg border border-danger-line bg-danger-soft p-4">
                 <p>
                   {answered} dari {view.total} soal terjawab. Kumpulkan sekarang? Jawaban tidak bisa diubah lagi.
                 </p>
                 <div className="mt-3 flex gap-2">
-                  <button onClick={() => setConfirming(false)} className="flex-1 rounded border border-slate-300 bg-white p-3">
+                  <button onClick={() => setConfirming(false)} className="flex-1 rounded border border-line-strong bg-surface p-3">
                     Batal
                   </button>
                   <button disabled={busy} onClick={submit} className="flex-1 rounded bg-red-600 p-3 font-semibold text-white disabled:opacity-50">
@@ -265,7 +265,7 @@ export default function ExamClient({ id }: { id: string }) {
 
 function QuestionCard({ q, selected, onPick }: { q: PublicQuestion; selected: number | null; onPick: (choice: number) => void }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
+    <div className="rounded-lg border border-line bg-surface p-4">
       <p className="mb-3 whitespace-pre-line font-medium">{q.text}</p>
       <div className="grid gap-2">
         {q.options.map((option, i) => (
@@ -273,7 +273,7 @@ function QuestionCard({ q, selected, onPick }: { q: PublicQuestion; selected: nu
             key={i}
             type="button"
             onClick={() => onPick(i)}
-            className={`rounded border p-3 text-left ${selected === i ? 'border-red-600 bg-red-50 font-semibold' : 'border-slate-300'}`}
+            className={`rounded border p-3 text-left ${selected === i ? 'border-red-600 bg-danger-soft font-semibold' : 'border-line-strong'}`}
           >
             {q.type === 'mc' && <span className="mr-2">{String.fromCharCode(65 + i)}.</span>}
             {option}

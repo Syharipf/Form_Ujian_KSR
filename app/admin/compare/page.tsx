@@ -22,7 +22,7 @@ export default async function ComparePage(props: PageProps<'/admin/compare'>) {
   const picker = (name: 'pre' | 'post', value: unknown) => (
     <label className="grid gap-1 text-sm">
       {name === 'pre' ? 'Pre-test' : 'Post-test'}
-      <select name={name} defaultValue={typeof value === 'string' ? value : ''} required className="rounded border border-slate-300 bg-white p-2">
+      <select name={name} defaultValue={typeof value === 'string' ? value : ''} required className="rounded border border-line-strong bg-surface p-2">
         <option value="" disabled>
           Pilih sesi
         </option>
@@ -57,9 +57,9 @@ export default async function ComparePage(props: PageProps<'/admin/compare'>) {
           <p className="text-sm">
             Rata-rata pre: <b>{show(result.avgPre)}</b> · post: <b>{show(result.avgPost)}</b> · peningkatan: <b>{show(result.avgDelta)}</b>
           </p>
-          <div className="overflow-x-auto rounded border border-slate-200 bg-white">
+          <div className="overflow-x-auto rounded border border-line bg-surface">
             <table className="w-full text-sm">
-              <thead className="bg-slate-100 text-left">
+              <thead className="bg-subtle text-left">
                 <tr>
                   <th className="p-2">Nama</th>
                   <th className="p-2">NIM</th>
@@ -70,19 +70,19 @@ export default async function ComparePage(props: PageProps<'/admin/compare'>) {
               </thead>
               <tbody>
                 {result.rows.map((r) => (
-                  <tr key={r.nim} className="border-t border-slate-200">
+                  <tr key={r.nim} className="border-t border-line">
                     <td className="p-2">{r.name}</td>
                     <td className="p-2">{r.nim}</td>
                     <td className="p-2">{show(r.pre)}</td>
                     <td className="p-2">{show(r.post)}</td>
-                    <td className={`p-2 ${r.delta !== null && r.delta < 0 ? 'text-red-600' : ''}`}>
+                    <td className={`p-2 ${r.delta !== null && r.delta < 0 ? 'text-danger' : ''}`}>
                       {r.delta === null ? '–' : r.delta > 0 ? `+${r.delta}` : r.delta}
                     </td>
                   </tr>
                 ))}
                 {!result.rows.length && (
                   <tr>
-                    <td colSpan={5} className="p-3 text-slate-500">
+                    <td colSpan={5} className="p-3 text-muted">
                       Belum ada peserta.
                     </td>
                   </tr>

@@ -62,20 +62,20 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
           ← Semua sesi
         </Link>
         <h1 className="mt-1 text-xl font-bold">{session.title}</h1>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted">
           {session.kind === 'pre' ? 'Pre-test' : 'Post-test'} · kode {session.code}
         </p>
       </header>
 
-      {msg && <p className="rounded bg-amber-100 p-3 text-sm">{msg}</p>}
+      {msg && <p className="rounded bg-warn-soft p-3 text-sm">{msg}</p>}
 
-      <section className="grid gap-4 rounded border border-slate-200 bg-white p-4 sm:grid-cols-[240px_1fr]">
+      <section className="grid gap-4 rounded border border-line bg-surface p-4 sm:grid-cols-[240px_1fr]">
         {/* eslint-disable-next-line @next/next/no-img-element -- data URL, nothing to optimize */}
         <img src={qr} alt={`QR ${link}`} className="w-full" />
         <div className="space-y-3">
           <h2 className="font-semibold">Akses peserta</h2>
           <p className="font-mono text-sm break-all">{link}</p>
-          <p className={session.is_open ? 'text-green-700' : 'text-slate-500'}>
+          <p className={session.is_open ? 'text-ok' : 'text-muted'}>
             {session.is_open ? 'Sesi dibuka — peserta bisa mulai.' : 'Sesi ditutup — peserta belum bisa mulai.'}
           </p>
           <form action={setOpen.bind(null, id, !session.is_open)}>
@@ -84,13 +84,13 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
         </div>
       </section>
 
-      <section className="rounded border border-slate-200 bg-white p-4">
+      <section className="rounded border border-line bg-surface p-4">
         <h2 className="mb-2 font-semibold">Soal ({questionCount})</h2>
         <form action={uploadQuestions.bind(null, id)} className="flex flex-wrap items-center gap-2">
           <input type="file" name="file" accept=".csv,text/csv" required className="text-sm" />
-          <button className="rounded border border-slate-300 px-4 py-2 text-sm">Upload &amp; ganti semua soal</button>
+          <button className="rounded border border-line-strong px-4 py-2 text-sm">Upload &amp; ganti semua soal</button>
         </form>
-        <p className="mt-2 text-sm text-slate-500">
+        <p className="mt-2 text-sm text-muted">
           Kolom CSV: <code>type,question,a,b,c,d,e,answer</code>. type <code>pg</code> (pilihan ganda) atau <code>bs</code> (benar/salah);
           answer huruf opsi, atau B/S untuk benar/salah. Dari Excel: Save As → CSV.{' '}
           <a href="/contoh-soal.csv" download className="underline">
@@ -99,7 +99,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
         </p>
       </section>
 
-      <section className="rounded border border-slate-200 bg-white p-4">
+      <section className="rounded border border-line bg-surface p-4">
         <h2 className="mb-3 font-semibold">Pengaturan</h2>
         <SessionForm action={updateSession.bind(null, id)} session={session} submitLabel="Simpan pengaturan" />
       </section>
@@ -108,22 +108,22 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold">Peserta ({attempts.length})</h2>
           <div className="flex gap-2">
-            <a href={`/admin/sessions/${id}/export`} className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm">
+            <a href={`/admin/sessions/${id}/export`} className="rounded border border-line-strong bg-surface px-3 py-1.5 text-sm">
               Export CSV
             </a>
             <form action={resetAllAttempts.bind(null, id)}>
               <ConfirmButton
                 message="Hapus SEMUA peserta beserta jawabannya di sesi ini?"
-                className="rounded border border-red-300 bg-white px-3 py-1.5 text-sm text-red-700"
+                className="rounded border border-danger-line bg-surface px-3 py-1.5 text-sm text-danger"
               >
                 Reset semua
               </ConfirmButton>
             </form>
           </div>
         </div>
-        <div className="overflow-x-auto rounded border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded border border-line bg-surface">
           <table className="w-full text-sm">
-            <thead className="bg-slate-100 text-left">
+            <thead className="bg-subtle text-left">
               <tr>
                 <th className="p-2">Nama</th>
                 <th className="p-2">NIM</th>
@@ -135,7 +135,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
             </thead>
             <tbody>
               {attempts.map((a) => (
-                <tr key={a.id} className="border-t border-slate-200 align-top">
+                <tr key={a.id} className="border-t border-line align-top">
                   <td className="p-2">{a.name}</td>
                   <td className="p-2">{a.nim}</td>
                   <td className="p-2">{a.score ?? '–'}</td>
@@ -145,7 +145,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
                     ) : (
                       <details>
                         <summary className="cursor-pointer">{a.violation_count}</summary>
-                        <ul className="mt-1 text-xs text-slate-600">
+                        <ul className="mt-1 text-xs text-secondary">
                           {(byAttempt.get(a.id) ?? []).map((v) => (
                             <li key={v.id}>
                               {time(v.created_at)} · {VIOLATION[v.type] ?? v.type}
@@ -158,7 +158,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
                   <td className="p-2">{a.submit_reason ? STATUS[a.submit_reason] : 'Mengerjakan'}</td>
                   <td className="p-2">
                     <form action={resetAttempt.bind(null, id, a.id)}>
-                      <ConfirmButton message={`Reset ${a.name}? Jawabannya dihapus dan peserta ini bisa mulai ulang.`} className="text-xs text-red-700 underline">
+                      <ConfirmButton message={`Reset ${a.name}? Jawabannya dihapus dan peserta ini bisa mulai ulang.`} className="text-xs text-danger underline">
                         Reset
                       </ConfirmButton>
                     </form>
@@ -167,7 +167,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
               ))}
               {!attempts.length && (
                 <tr>
-                  <td colSpan={6} className="p-3 text-slate-500">
+                  <td colSpan={6} className="p-3 text-muted">
                     Belum ada peserta.
                   </td>
                 </tr>
