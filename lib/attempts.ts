@@ -57,7 +57,20 @@ export async function sync(ctx: Ctx, now: Date) {
   ctx.attempt = row ?? (await fetchAttempt(ctx.attempt.id))!
 }
 
-export const view = (ctx: Ctx, now: Date) => buildView(ctx.attempt, ctx.session, ctx.questions, now)
+// A participant sees their score only after the session is closed AND nobody is still working,
+// so early finishers can't leak anything to those still taking the exam.
+export async function scoresReleased(session: Session) {
+  if (session.is_open) return false
+  await finalizeExpired(session.id)
+  const { count, error } = await db().from('attempts').select('id', { count: 'exact', head: true }).eq('session_id', session.id).is('submitted_at', null)
+  if (error) throw error
+  return count === 0
+}
+
+export async function view(ctx: Ctx, now: Date) {
+  const released = ctx.attempt.submitted_at !== null && (await scoresReleased(ctx.session))
+  return buildView(ctx.attempt, ctx.session, ctx.questions, now, released)
+}
 
 // Participants who closed the browser never trigger their own timeout; settle them for the results page.
 export async function finalizeExpired(sessionId: string) {

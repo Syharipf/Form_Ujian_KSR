@@ -1,6 +1,6 @@
 // End-to-end run against the local stand-in (PGlite + PostgREST) and `next dev` on :3100.
 // Start everything with `bun run e2e` (see e2e/run.sh).
-import { chromium, devices, type Browser, type Page } from 'playwright-core'
+import { chromium, devices, type Browser, type Page, type Route } from 'playwright-core'
 import assert from 'node:assert/strict'
 
 const BASE = 'http://localhost:3100'
@@ -22,11 +22,11 @@ async function admin(browser: Browser) {
   await page.goto(`${BASE}/admin`)
   assert.match(page.url(), /\/admin\/login/)
   await page.fill('input[name=password]', 'salah')
-  await page.click('button:text-is("Masuk")')
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click()
   await page.waitForURL(/error=1/)
   await page.getByText('Password salah.').waitFor()
   await page.fill('input[name=password]', 'rahasia-e2e')
-  await page.click('button:text-is("Masuk")')
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click()
   await page.waitForURL(`${BASE}/admin`)
   log('admin login rejects wrong password, accepts right one')
   return page
@@ -39,7 +39,7 @@ async function createSession(page: Page, title: string, kind: 'pre' | 'post', mo
   await page.selectOption('select[name=timer_mode]', mode)
   await page.fill('input[name=duration_min]', '10')
   await page.fill('input[name=per_question_sec]', String(perQuestion))
-  await page.click('button:text-is("Buat sesi")')
+  await page.getByRole('button', { name: 'Buat sesi', exact: true }).click()
   await page.waitForURL(/\/admin\/sessions\//)
   const code = (await page.locator('text=/kode [A-Z0-9]{6}/').innerText()).match(/kode ([A-Z0-9]{6})/)![1]
   await page.click('summary:has-text("Upload CSV")')
@@ -92,7 +92,7 @@ try {
   // no pause: submit must queue behind the in-flight answers
   await a.page.click('text=Kumpulkan jawaban')
   await a.page.getByText('4 dari 4 soal terjawab').waitFor()
-  await a.page.click('button:text-is("Kumpulkan")')
+  await a.page.getByRole('button', { name: 'Kumpulkan', exact: true }).click()
   await a.page.getByText('Jawaban terkirim').waitFor()
   assert.ok(a.views.length > 0 && a.views.every((v) => !v.includes('answer_index') && !v.includes('"score"')))
   log('total mode: answer all, confirm, submit; API never sent answer key or score')
@@ -185,7 +185,8 @@ try {
     if (n === 3) await p.page.getByText('Soal 4 dari 4').waitFor()
   }
   await p.page.getByText('Jawaban terkirim').waitFor()
-  log('per-question: last answer finishes the exam')
+  await p.page.getByText('Nilai akan muncul di halaman ini').waitFor()
+  log('per-question: last answer finishes the exam; score is withheld while the session is open')
 
   await adminPage.goto(post.url)
   assert.match(await row('Ani').innerText(), /1001\s+75\s+0\s+Selesai/)
@@ -198,21 +199,47 @@ try {
   assert.match(await adminPage.locator('tbody tr', { hasText: 'Ani' }).innerText(), /1001\s+100\s+75\s+-25/)
   log('compare page joins pre/post by NIM with delta')
 
-  // --- closed session -----------------------------------------------------------
+  // --- closed session and score release -------------------------------------------
+  // Budi is still working (per-question, 4 × 5 s) when the session closes, so scores stay hidden.
+  const late = await participant(browser, post.code, 'Budi', '1004')
   await adminPage.goto(post.url)
   await adminPage.click('text=Tutup sesi')
   await adminPage.getByText('Sesi ditutup —').waitFor()
+  await adminPage.getByText('1 peserta masih mengerjakan').waitFor()
+  await p.page.reload()
+  await p.page.getByText('Nilai akan muncul di halaman ini').waitFor()
+  assert.ok(p.views.every((v) => !v.includes('"score"')))
+
+  // Budi answers whatever question is current until done (a slow step may let one time out).
+  while (!(await late.page.getByText('Jawaban terkirim').or(late.page.getByText('Nilaimu')).isVisible())) {
+    await late.page.locator('main button').first().click({ timeout: 2000 }).catch(() => {})
+    await late.page.locator('main button', { hasText: /^Jawab & / }).click({ timeout: 2000 }).catch(() => {})
+  }
+  await late.page.getByText('Nilaimu').waitFor() // the last one to finish sees the score right away
+  await p.page.reload()
+  await p.page.getByText('Nilaimu').waitFor()
+  assert.equal(await p.page.locator('main p.text-6xl').innerText(), '75')
+  await adminPage.reload()
+  await adminPage.getByText('Nilai sudah terlihat oleh peserta').waitFor()
+  log('score is shown only after the session is closed and the last participant finishes')
+
   const closed = await (await browser.newContext()).newPage()
   await closed.goto(`${BASE}/s/${post.code}`)
   await closed.getByText('Sesi ini belum dibuka atau sudah ditutup.').waitFor()
+  assert.equal(await closed.getByText('Lihat nilai ujianmu').count(), 0)
   const api = await closed.request.post(`${BASE}/api/attempts`, { data: { code: post.code, name: 'X', nim: '9' } })
   assert.equal(api.status(), 403)
   log('closed session refuses new participants (page and API)')
 
+  await p.page.goto(`${BASE}/s/${post.code}`)
+  await p.page.click('text=Lihat nilai ujianmu')
+  await p.page.getByText('Nilaimu').waitFor()
+  log('the join page links a finished participant back to their score')
+
   // --- manual questions ----------------------------------------------------------
   await adminPage.goto(`${BASE}/admin`)
   await adminPage.fill('input[name=title]', 'Manual E2E')
-  await adminPage.click('button:text-is("Buat sesi")')
+  await adminPage.getByRole('button', { name: 'Buat sesi', exact: true }).click()
   await adminPage.waitForURL(/\/admin\/sessions\//)
   const addForm = adminPage.locator('details:has(summary:has-text("Tambah soal manual")) form')
   await addForm.locator('textarea[name=question]').fill('Warna bendera PMI?')
@@ -237,7 +264,7 @@ try {
   await first.locator('summary:has-text("Edit")').click()
   await first.locator('input[name=a]').fill('Merah')
   await first.locator('select[name=answer]').selectOption('A')
-  await first.locator('button:text-is("Simpan soal")').click()
+  await first.getByRole('button', { name: 'Simpan soal', exact: true }).click()
   await adminPage.getByText('Soal diperbarui').waitFor()
   assert.match(await adminPage.locator('ol > li').first().innerText(), /A\. Merah ✓/)
   adminPage.once('dialog', (dlg) => dlg.accept())
@@ -271,6 +298,32 @@ try {
   assert.equal(await theme(), 'system')
   assert.equal(await surface(), lightBg)
   log('theme toggle switches to dark, survives reload, and returns to following the device')
+
+  // --- pending feedback ------------------------------------------------------------
+  // Slow the server down so the delayed spinner has time to appear.
+  const slow = (ms: number) => async (route: Route) => {
+    await sleep(ms)
+    await route.continue().catch(() => {})
+  }
+  const spinner = (page: Page) => page.locator('button[aria-busy="true"] svg.animate-spin')
+
+  const joiner = await (await browser.newContext({ ...devices['Pixel 7'] })).newPage()
+  await joiner.route('**/api/attempts', slow(1500))
+  await joiner.goto(`${BASE}/s/${pre.code}`)
+  await joiner.fill('input[name=name]', 'Dodi')
+  await joiner.fill('input[name=nim]', '1005')
+  await joiner.click('text=Mulai ujian')
+  await spinner(joiner).waitFor({ state: 'visible' })
+  assert.ok(await joiner.locator('button[aria-busy="true"]').isDisabled())
+  await joiner.waitForURL(/\/exam\//)
+  log('participant start button shows a spinner and is disabled while the request is slow')
+
+  await adminPage.goto(`${BASE}/admin`)
+  await adminPage.route(`${BASE}/admin`, (route) => (route.request().method() === 'POST' ? slow(1500)(route) : route.continue()))
+  await adminPage.getByRole('button', { name: 'Keluar', exact: true }).click()
+  await spinner(adminPage).waitFor({ state: 'visible' })
+  await adminPage.waitForURL(/\/admin\/login/)
+  log('admin server-action button shows a spinner while the action is slow')
 
   console.log('\nALL E2E CHECKS PASSED')
 } catch (e) {

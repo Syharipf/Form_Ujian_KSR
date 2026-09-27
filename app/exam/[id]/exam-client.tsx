@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import Notice from '@/app/notice'
+import { PendingLabel } from '@/app/pending'
 import ThemeToggle from '@/app/theme-toggle'
 import { GRACE_MS, type ExamView, type PublicQuestion } from '@/lib/exam'
 import { enterFullscreen, exitFullscreen, isFullscreen, subscribeFullscreen } from '@/lib/fullscreen'
@@ -22,13 +23,21 @@ async function call(path: string, body?: object): Promise<ExamView> {
   return data
 }
 
-function forget(id: string) {
+// Drop the "resume" pointer for this attempt. After a submit, keep a `result:<code>` pointer
+// so the join page can link back here to show the score once it is released.
+function forget(id: string, submitted = false) {
   try {
     for (const key of Object.keys(localStorage)) {
-      if (key.startsWith('attempt:') && localStorage.getItem(key) === id) localStorage.removeItem(key)
+      if (localStorage.getItem(key) !== id) continue
+      if (key.startsWith('attempt:')) {
+        localStorage.removeItem(key)
+        if (submitted) localStorage.setItem(`result:${key.slice('attempt:'.length)}`, id)
+      } else if (key.startsWith('result:') && !submitted) localStorage.removeItem(key)
     }
   } catch {}
 }
+
+const RESULT_POLL_MS = 15_000
 
 const clock = (ms: number) => {
   const s = Math.ceil(ms / 1000)
@@ -126,14 +135,20 @@ export default function ExamClient({ id }: { id: string }) {
   useEffect(() => {
     if (view?.status !== 'submitted') return
     exitFullscreen()
-    forget(id)
+    forget(id, true)
   }, [view, id])
+
+  // Submitted but score not released yet: check back until the session is over.
+  const waitingForScore = view?.status === 'submitted' && view.score === undefined
+  useEffect(() => {
+    if (!waitingForScore) return
+    const t = setInterval(refresh, RESULT_POLL_MS)
+    return () => clearInterval(t)
+  }, [waitingForScore, refresh])
 
   if (fatal) return <Notice title="Tidak bisa membuka ujian" body={fatal.message} />
   if (!view) return <Notice title="Memuat ujian…" />
-  if (view.status === 'submitted') {
-    return <Notice title="Jawaban terkirim" body="Terima kasih, ujianmu sudah selesai. Kamu boleh menutup halaman ini." />
-  }
+  if (view.status === 'submitted') return <Submitted view={view} />
 
   // Answers and submit run one at a time so each response includes every earlier answer,
   // and a quick "Kumpulkan" never overtakes the last pick. Only the final response is applied,
@@ -209,9 +224,10 @@ export default function ExamClient({ id }: { id: string }) {
               <button
                 disabled={pickedChoice === null || busy}
                 onClick={() => pickedChoice !== null && answerCurrent(current.id, pickedChoice)}
-                className="w-full rounded bg-red-600 p-3 font-semibold text-white disabled:opacity-40"
+                aria-busy={busy}
+                className={`relative w-full rounded bg-red-600 p-3 font-semibold text-white ${pickedChoice === null ? 'opacity-40' : ''}`}
               >
-                {view.current_index + 1 === view.total ? 'Jawab & selesai' : 'Jawab & lanjut'}
+                <PendingLabel pending={busy}>{view.current_index + 1 === view.total ? 'Jawab & selesai' : 'Jawab & lanjut'}</PendingLabel>
               </button>
             </section>
           )
@@ -232,8 +248,8 @@ export default function ExamClient({ id }: { id: string }) {
                   <button onClick={() => setConfirming(false)} className="flex-1 rounded border border-line-strong bg-surface p-3">
                     Batal
                   </button>
-                  <button disabled={busy} onClick={submit} className="flex-1 rounded bg-red-600 p-3 font-semibold text-white disabled:opacity-50">
-                    Kumpulkan
+                  <button disabled={busy} aria-busy={busy} onClick={submit} className="relative flex-1 rounded bg-red-600 p-3 font-semibold text-white">
+                    <PendingLabel pending={busy}>Kumpulkan</PendingLabel>
                   </button>
                 </div>
               </div>
@@ -264,6 +280,23 @@ export default function ExamClient({ id }: { id: string }) {
         </div>
       )}
     </div>
+  )
+}
+
+function Submitted({ view }: Readonly<{ view: ExamView }>) {
+  if (view.score === undefined) {
+    return (
+      <Notice
+        title="Jawaban terkirim"
+        body="Nilai akan muncul di halaman ini setelah panitia menutup sesi dan semua peserta selesai. Biarkan halaman ini terbuka, atau buka lagi QR/link ujian nanti."
+      />
+    )
+  }
+  return (
+    <Notice title={view.title} body={`${view.name} · ${view.nim}`}>
+      <p className="mt-4 text-sm text-muted">Nilaimu</p>
+      <p className="text-6xl font-bold">{view.score}</p>
+    </Notice>
   )
 }
 

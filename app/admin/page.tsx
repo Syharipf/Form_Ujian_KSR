@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import LinkPending from '@/app/link-pending'
+import SubmitButton from '@/app/submit-button'
 import { requireAdmin } from '@/lib/admin-auth'
 import { db, must } from '@/lib/db'
 import type { Session } from '@/lib/exam'
@@ -20,7 +22,7 @@ export default async function AdminHome() {
       <header className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Admin Ujian KSR PMI Telkom</h1>
         <form action={logout}>
-          <button className="text-sm underline">Keluar</button>
+          <SubmitButton className="text-sm underline">Keluar</SubmitButton>
         </form>
       </header>
 
@@ -36,14 +38,17 @@ export default async function AdminHome() {
                     ({s.kind === 'pre' ? 'Pre' : 'Post'} · {s.code})
                   </span>
                 </span>
-                <span className={`text-sm ${s.is_open ? 'text-ok' : 'text-muted'}`}>{s.is_open ? 'Dibuka' : 'Ditutup'}</span>
+                <span className="flex items-center gap-1">
+                  <span className={`text-sm ${s.is_open ? 'text-ok' : 'text-muted'}`}>{s.is_open ? 'Dibuka' : 'Ditutup'}</span>
+                  <LinkPending />
+                </span>
               </Link>
             </li>
           ))}
           {!sessions.length && <li className="p-3 text-muted">Belum ada sesi.</li>}
         </ul>
         <Link href="/admin/compare" className="mt-2 inline-block text-sm underline">
-          Bandingkan pre-test vs post-test →
+          Bandingkan pre-test vs post-test → <LinkPending />
         </Link>
       </section>
 

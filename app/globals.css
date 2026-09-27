@@ -95,6 +95,25 @@
   }
 }
 
+/* Pending feedback (app/pending.tsx): reveal the spinner only if the wait is noticeable. */
+.pending-spinner {
+  opacity: 0;
+  animation: pending-reveal 0s linear 300ms forwards;
+}
+.pending-label {
+  animation: pending-hide 0s linear 300ms forwards;
+}
+@keyframes pending-reveal {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pending-hide {
+  to {
+    visibility: hidden;
+  }
+}
+
 /* Exam page: no text selection, no long-press menu (copy / "Search with Google Lens"). */
 .no-select {
   -webkit-user-select: none;

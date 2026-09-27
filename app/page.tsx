@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import SubmitButton from './submit-button'
 import ThemeToggle from './theme-toggle'
 
 async function open(formData: FormData) {
@@ -25,7 +26,7 @@ export default function Home() {
           autoCapitalize="characters"
           className="min-w-0 flex-1 rounded border border-line-strong p-3 uppercase"
         />
-        <button className="rounded bg-red-600 px-5 font-semibold text-white">Masuk</button>
+        <SubmitButton className="rounded bg-red-600 px-5 font-semibold text-white">Masuk</SubmitButton>
       </form>
     </main>
   )

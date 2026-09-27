@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import SubmitButton from '@/app/submit-button'
 import type { Question } from '@/lib/exam'
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E']
@@ -67,7 +68,7 @@ export default function QuestionForm({
           </select>
         </label>
       )}
-      <button type="submit" className="rounded bg-red-600 p-2 font-semibold text-white">{submitLabel}</button>
+      <SubmitButton className="rounded bg-red-600 p-2 font-semibold text-white">{submitLabel}</SubmitButton>
     </form>
   )
 }
