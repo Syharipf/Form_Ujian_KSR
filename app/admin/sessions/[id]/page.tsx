@@ -3,7 +3,7 @@ import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import QRCode from 'qrcode'
 import { requireAdmin } from '@/lib/admin-auth'
-import { finalizeExpired, resultsStatus } from '@/lib/attempts'
+import { finalizeExpired, resultsStatus, UUID } from '@/lib/attempts'
 import { db, must } from '@/lib/db'
 import { formatDate, type Attempt, type Question, type ResultsStatus, type Session } from '@/lib/exam'
 import { deleteQuestion, deleteSession, resetAllAttempts, resetAttempt, saveQuestion, setOpen, updateSession, uploadQuestions } from '../../actions'
@@ -12,8 +12,6 @@ import SubmitButton from '@/app/submit-button'
 import QuestionForm from '../../question-form'
 import SessionForm from '../../session-form'
 import { AutoRefresh, Countdown } from './live'
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const STATUS = { manual: 'Selesai', timeout: 'Waktu habis', violation: 'Auto-submit (pelanggaran)' } as const
 const STATUS_STYLE = { manual: 'bg-ok-soft text-ok', timeout: 'bg-subtle text-secondary', violation: 'bg-danger-soft text-danger', working: 'bg-warn-soft' }
@@ -106,9 +104,15 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
           <p className="text-sm text-muted">
             <ScoreStatus results={results} working={working} serverNow={serverNow} />
           </p>
-          <form action={setOpen.bind(null, id, !session.is_open)}>
-            <SubmitButton className={`btn ${session.is_open ? 'btn-secondary' : 'btn-primary'}`}>{session.is_open ? 'Tutup sesi' : 'Buka sesi'}</SubmitButton>
-          </form>
+          <div className="flex flex-wrap gap-2">
+            <form action={setOpen.bind(null, id, !session.is_open)}>
+              <SubmitButton className={`btn ${session.is_open ? 'btn-secondary' : 'btn-primary'}`}>{session.is_open ? 'Tutup sesi' : 'Buka sesi'}</SubmitButton>
+            </form>
+            <a href={`/admin/sessions/${id}/qr`} target="_blank" className="btn btn-secondary">
+              Tayangkan QR &amp; kode
+            </a>
+          </div>
+          <p className="text-xs text-muted">Untuk share screen atau proyektor, tayangkan halaman QR (tab baru), bukan halaman ini: daftar soal di bawah memuat kunci jawaban.</p>
         </div>
       </section>
 

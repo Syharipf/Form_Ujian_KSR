@@ -101,12 +101,19 @@ Ada dua cara, dan keduanya bisa digabung.
 
 > **Kenapa terkunci?** Setiap peserta mendapat urutan soal dan opsi acak saat mulai. Mengubah soal di tengah jalan bisa merusak penilaian. Untuk mengubah soal setelah ada peserta, klik **Reset semua** di bagian Peserta. Semua jawaban peserta ikut terhapus. Mode timer, durasi, dan waktu per soal juga terkunci dengan alasan yang sama.
 
-### 2.4 Membuka sesi dan membagikan QR
+### 2.4 Membuka sesi dan menayangkan QR
 
-Klik **Buka sesi**. Status berubah menjadi *Sesi dibuka — peserta bisa mulai*. Tayangkan QR di proyektor, atau bagikan link di bawahnya ke grup peserta.
+Klik **Buka sesi**. Status berubah menjadi *Sesi dibuka — peserta bisa mulai*.
 
-<p align="center"><img src="img/admin-session.webp" width="760" alt="Halaman sesi: QR, link, status, dan daftar soal"></p>
+<p align="center"><img src="img/admin-session.webp" width="760" alt="Halaman sesi: QR, link, status, tombol Tayangkan QR & kode"></p>
 
+Untuk share screen (Zoom/Meet) atau proyektor, klik **Tayangkan QR & kode**. Halaman khusus terbuka di tab baru. Isinya hanya judul sesi, QR besar, dan kode sesi besar, sehingga peserta di bagian belakang ruangan pun bisa scan atau mengetik kodenya. Klik **Layar penuh** supaya tampilannya memenuhi layar. Status sesi di halaman ini juga ikut berubah sendiri kalau sesi dibuka atau ditutup dari tab lain.
+
+<p align="center"><img src="img/admin-qr-display.webp" width="760" alt="Halaman tayang: QR dan kode sesi dalam ukuran besar"></p>
+
+> ⚠️ **Jangan share screen halaman sesi admin.** Daftar soal di halaman itu menampilkan kunci jawaban (✓ hijau). Yang di-share cukup tab **Tayangkan QR & kode**.
+
+- Link di bawah QR juga bisa dibagikan ke grup peserta.
 - Selama sesi **ditutup**, peserta tidak bisa memulai ujian.
 - Peserta juga bisa masuk dengan mengetik kode sesi di halaman depan **ujiksr.vercel.app**.
 
@@ -242,7 +249,7 @@ Kalau halaman sudah telanjur ditutup, buka lagi QR/link yang sama di HP yang sam
 **Sebelum mulai**
 - [ ] Pastikan WiFi/sinyal ruangan cukup untuk semua peserta.
 - [ ] Minta peserta mengaktifkan Jangan Ganggu dan memakai Chrome/Safari.
-- [ ] Klik **Buka sesi**, lalu tayangkan QR.
+- [ ] Klik **Buka sesi**, lalu **Tayangkan QR & kode** di tab baru. Share tab itu saja, jangan halaman sesi yang berisi kunci jawaban.
 
 **Selama ujian**
 - [ ] Pantau tabel peserta. Tangani permintaan reset dengan cepat.
