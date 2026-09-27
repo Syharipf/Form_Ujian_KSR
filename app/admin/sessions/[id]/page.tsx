@@ -16,13 +16,15 @@ import { AutoRefresh, Countdown } from './live'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const STATUS = { manual: 'Selesai', timeout: 'Waktu habis', violation: 'Auto-submit (pelanggaran)' } as const
-const VIOLATION: Record<string, string> = {
-  hidden: 'pindah aplikasi/tab',
-  blur: 'hilang fokus',
-  fullscreen_exit: 'keluar layar penuh',
-  resize: 'layar mengecil (split screen)',
-  reopen: 'membuka ulang ujian',
-}
+const STATUS_STYLE = { manual: 'bg-ok-soft text-ok', timeout: 'bg-subtle text-secondary', violation: 'bg-danger-soft text-danger', working: 'bg-warn-soft' }
+// A Map, not an object literal: a stored type like '__proto__' must miss, not render Object.prototype.
+const VIOLATION = new Map([
+  ['hidden', 'pindah aplikasi/tab'],
+  ['blur', 'hilang fokus'],
+  ['fullscreen_exit', 'keluar layar penuh'],
+  ['resize', 'layar mengecil (split screen)'],
+  ['reopen', 'membuka ulang ujian'],
+])
 
 const time = (iso: string) =>
   new Date(iso).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -72,45 +74,52 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
   const qr = await QRCode.toDataURL(link, { width: 480, margin: 1 })
 
   return (
-    <main className="mx-auto max-w-4xl space-y-8 p-4">
-      <header>
-        <Link href="/admin" className="text-sm underline">
+    <main className="mx-auto max-w-4xl space-y-6 p-4 pb-12">
+      <header className="pt-2">
+        <Link href="/admin" className="text-sm font-semibold text-muted hover:text-fg">
           ← Semua sesi <LinkPending />
         </Link>
-        <h1 className="mt-1 text-xl font-bold">{session.title}</h1>
-        <p className="text-sm text-muted">
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <h1 className="min-w-0 text-2xl font-extrabold tracking-tight">{session.title}</h1>
+          <span className={`badge ${session.is_open ? 'bg-ok-soft text-ok' : 'bg-subtle text-muted'}`}>{session.is_open ? 'Dibuka' : 'Ditutup'}</span>
+        </div>
+        <p className="mt-1 text-sm text-muted">
           {formatDate(session.held_on)} · {session.kind === 'pre' ? 'Pre-test' : 'Post-test'} · kode {session.code}
         </p>
       </header>
 
       {/* Joins, answers, violations and the score release only happen while someone can still work. */}
       {(session.is_open || working > 0) && <AutoRefresh />}
-      {msg && <p className="rounded bg-warn-soft p-3 text-sm">{msg}</p>}
+      {msg && (
+        <p role="status" className="rounded-xl bg-warn-soft p-3 text-sm font-medium">
+          {msg}
+        </p>
+      )}
 
-      <section className="grid gap-4 rounded border border-line bg-surface p-4 sm:grid-cols-[240px_1fr]">
+      <section className="card grid gap-5 p-4 sm:grid-cols-[220px_1fr] sm:p-6">
         {/* eslint-disable-next-line @next/next/no-img-element -- data URL, nothing to optimize */}
-        <img src={qr} alt={`QR ${link}`} className="w-full" />
+        <img src={qr} alt={`QR ${link}`} className="w-full rounded-xl bg-white p-2 ring-1 ring-line" />
         <div className="space-y-3">
-          <h2 className="font-semibold">Akses peserta</h2>
-          <p className="font-mono text-sm break-all">{link}</p>
-          <p className={session.is_open ? 'text-ok' : 'text-muted'}>
+          <h2 className="text-lg font-bold">Akses peserta</h2>
+          <p className="rounded-lg bg-subtle px-3 py-2 font-mono text-sm break-all">{link}</p>
+          <p className={`font-semibold ${session.is_open ? 'text-ok' : 'text-muted'}`}>
             {session.is_open ? 'Sesi dibuka — peserta bisa mulai.' : 'Sesi ditutup — peserta belum bisa mulai.'}
           </p>
           <p className="text-sm text-muted">
             <ScoreStatus results={results} working={working} serverNow={serverNow} />
           </p>
           <form action={setOpen.bind(null, id, !session.is_open)}>
-            <SubmitButton className="rounded bg-red-600 px-4 py-2 font-semibold text-white">{session.is_open ? 'Tutup sesi' : 'Buka sesi'}</SubmitButton>
+            <SubmitButton className={`btn ${session.is_open ? 'btn-secondary' : 'btn-primary'}`}>{session.is_open ? 'Tutup sesi' : 'Buka sesi'}</SubmitButton>
           </form>
         </div>
       </section>
 
-      <section className="space-y-3 rounded border border-line bg-surface p-4">
-        <h2 className="font-semibold">Soal ({questions.length})</h2>
+      <section className="card space-y-4 p-4 sm:p-6">
+        <h2 className="text-lg font-bold">Soal ({questions.length})</h2>
         {attempts.length > 0 && <p className="text-sm text-muted">Soal terkunci karena sudah ada peserta. Reset semua peserta untuk mengubah soal.</p>}
         <ol className="space-y-2">
           {questions.map((q, i) => (
-            <li key={q.id} className="rounded border border-line p-3 text-sm">
+            <li key={q.id} className="rounded-xl border border-line p-4 text-sm">
               <p className="whitespace-pre-line font-medium">
                 {i + 1}. {q.text}
               </p>
@@ -145,14 +154,14 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
 
         {attempts.length === 0 && (
           <>
-            <details open={!questions.length} className="rounded border border-line p-3">
+            <details open={!questions.length} className="rounded-xl border border-line p-4">
               <summary className="cursor-pointer font-semibold">+ Tambah soal manual</summary>
               <div className="mt-3">
                 <QuestionForm action={saveQuestion.bind(null, id, null)} submitLabel="Tambah soal" />
               </div>
             </details>
 
-            <details className="rounded border border-line p-3">
+            <details className="rounded-xl border border-line p-4">
               <summary className="cursor-pointer font-semibold">Upload CSV (ganti semua soal)</summary>
               <form action={uploadQuestions.bind(null, id)} className="mt-3 flex flex-wrap items-center gap-2">
                 {/* No accept filter: Android often labels .csv with other MIME types and greys the file out. */}
@@ -160,12 +169,12 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
                 {questions.length ? (
                   <SubmitButton
                     confirm={`Upload akan MENGGANTI ${questions.length} soal yang ada. Lanjutkan?`}
-                    className="rounded border border-line-strong px-4 py-2 text-sm"
+                    className="btn btn-secondary text-sm"
                   >
                     Upload &amp; ganti semua soal
                   </SubmitButton>
                 ) : (
-                  <SubmitButton className="rounded border border-line-strong px-4 py-2 text-sm">Upload &amp; ganti semua soal</SubmitButton>
+                  <SubmitButton className="btn btn-secondary text-sm">Upload &amp; ganti semua soal</SubmitButton>
                 )}
               </form>
               <p className="mt-2 text-sm text-muted">
@@ -180,13 +189,16 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
         )}
       </section>
 
-      <section className="rounded border border-line bg-surface p-4">
-        <h2 className="mb-3 font-semibold">Pengaturan</h2>
+      <section className="card p-4 sm:p-6">
+        <h2 className="mb-4 text-lg font-bold">Pengaturan</h2>
+        {attempts.length > 0 && (
+          <p className="-mt-2 mb-4 text-sm text-muted">Mode timer, durasi, dan waktu per soal terkunci selama ada peserta.</p>
+        )}
         <SessionForm action={updateSession.bind(null, id)} session={session} submitLabel="Simpan pengaturan" />
-        <form action={deleteSession.bind(null, id)} className="mt-4 border-t border-line pt-4">
+        <form action={deleteSession.bind(null, id)} className="mt-6 border-t border-line pt-4">
           <SubmitButton
             confirm={`Hapus sesi "${session.title}" beserta ${questions.length} soal dan ${attempts.length} peserta? Tidak bisa dibatalkan.`}
-            className="rounded border border-danger-line bg-surface px-3 py-1.5 text-sm text-danger"
+            className="btn btn-danger text-sm"
           >
             Hapus sesi
           </SubmitButton>
@@ -195,40 +207,40 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-semibold">Peserta ({attempts.length})</h2>
+          <h2 className="text-lg font-bold">Peserta ({attempts.length})</h2>
           <div className="flex gap-2">
-            <a href={`/admin/sessions/${id}/export`} className="rounded border border-line-strong bg-surface px-3 py-1.5 text-sm">
+            <a href={`/admin/sessions/${id}/export`} className="btn btn-secondary text-sm">
               Export CSV
             </a>
             <form action={resetAllAttempts.bind(null, id)}>
               <SubmitButton
                 confirm="Hapus SEMUA peserta beserta jawabannya di sesi ini?"
-                className="rounded border border-danger-line bg-surface px-3 py-1.5 text-sm text-danger"
+                className="btn btn-danger text-sm"
               >
                 Reset semua
               </SubmitButton>
             </form>
           </div>
         </div>
-        <div className="overflow-x-auto rounded border border-line bg-surface">
+        <div className="card overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-subtle text-left">
+            <thead className="bg-subtle text-left text-xs uppercase tracking-wide text-muted">
               <tr>
-                <th className="p-2">Nama</th>
-                <th className="p-2">NIM</th>
-                <th className="p-2">Nilai</th>
-                <th className="p-2">Pelanggaran</th>
-                <th className="p-2">Status</th>
-                <th className="p-2" />
+                <th className="p-3">Nama</th>
+                <th className="p-3">NIM</th>
+                <th className="p-3">Nilai</th>
+                <th className="p-3">Pelanggaran</th>
+                <th className="p-3">Status</th>
+                <th className="p-3" />
               </tr>
             </thead>
             <tbody>
               {attempts.map((a) => (
                 <tr key={a.id} className="border-t border-line align-top">
-                  <td className="p-2">{a.name}</td>
-                  <td className="p-2">{a.nim}</td>
-                  <td className="p-2">{a.score ?? '–'}</td>
-                  <td className="p-2">
+                  <td className="p-3">{a.name}</td>
+                  <td className="p-3">{a.nim}</td>
+                  <td className="p-3">{a.score ?? '–'}</td>
+                  <td className="p-3">
                     {a.violation_count === 0 ? (
                       '0'
                     ) : (
@@ -237,15 +249,17 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
                         <ul className="mt-1 text-xs text-secondary">
                           {(byAttempt.get(a.id) ?? []).map((v) => (
                             <li key={v.id}>
-                              {time(v.created_at)} · {VIOLATION[v.type] ?? v.type}
+                              {time(v.created_at)} · {VIOLATION.get(v.type) ?? v.type}
                             </li>
                           ))}
                         </ul>
                       </details>
                     )}
                   </td>
-                  <td className="p-2">{a.submit_reason ? STATUS[a.submit_reason] : 'Mengerjakan'}</td>
-                  <td className="p-2">
+                  <td className="p-3">
+                    <span className={`badge ${STATUS_STYLE[a.submit_reason ?? 'working']}`}>{a.submit_reason ? STATUS[a.submit_reason] : 'Mengerjakan'}</span>
+                  </td>
+                  <td className="p-3">
                     <form action={resetAttempt.bind(null, id, a.id)}>
                       <SubmitButton confirm={`Reset ${a.name}? Jawabannya dihapus dan peserta ini bisa mulai ulang.`} className="text-xs text-danger underline">
                         Reset

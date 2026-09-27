@@ -67,7 +67,6 @@ export default function ExamClient({ id }: { id: string }) {
   const base = `/api/attempts/${id}`
   const [view, setView] = useState<ExamView | null>(null)
   const [offset, setOffset] = useState(0) // server clock − device clock
-  const [now, setNow] = useState(() => Date.now())
   const [fatal, setFatal] = useState<ApiError | null>(null)
   const [notice, setNotice] = useState('')
   const [warning, setWarning] = useState('')
@@ -132,24 +131,18 @@ export default function ExamClient({ id }: { id: string }) {
     }
   }, [id, base, apply, onError, reportViolation])
 
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 250)
-    return () => clearInterval(t)
-  }, [])
-
   const active = view?.status === 'active'
   useAntiCheat(active, reportViolation)
 
   const deadline = view ? (view.question_deadline_at ?? view.deadline_at) : 0
-  const remaining = Math.max(0, deadline - (now + offset))
-  const expired = active && remaining === 0
 
-  // Timer ran out: let the server (which allows GRACE_MS) skip the question or submit.
+  // When the timer runs out, let the server (which allows GRACE_MS) skip the question or submit.
+  // Re-armed by every new view, so a check that comes back still active tries again.
   useEffect(() => {
-    if (!expired) return
-    const t = setTimeout(refresh, GRACE_MS + 500)
+    if (!active) return
+    const t = setTimeout(refresh, Math.max(0, deadline - (Date.now() + offset)) + GRACE_MS + 500)
     return () => clearTimeout(t)
-  }, [expired, view, refresh])
+  }, [active, deadline, offset, view, refresh])
 
   useEffect(() => {
     if (view?.status !== 'submitted') return
@@ -161,7 +154,7 @@ export default function ExamClient({ id }: { id: string }) {
 
   if (fatal) return <Notice title="Tidak bisa membuka ujian" body={fatal.message} />
   if (!view) return <Notice title="Memuat ujian…" />
-  if (view.status === 'submitted') return <Submitted view={view} serverNow={now + offset} />
+  if (view.status === 'submitted') return <Submitted view={view} offset={offset} />
 
   // Answers and submit run one at a time so each response includes every earlier answer,
   // and a quick "Kumpulkan" never overtakes the last pick. Only the final response is applied,
@@ -211,26 +204,35 @@ export default function ExamClient({ id }: { id: string }) {
     <div className="no-select min-h-dvh">
       <Watermark text={`${view.name} · ${view.nim}`} />
 
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-surface px-4 py-3">
-        <div className="min-w-0">
-          <p className="truncate font-semibold">{view.title}</p>
-          <p className="text-xs text-muted">
-            Pelanggaran {view.violation_count}/{view.max_violations}
-          </p>
+      <header className="sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur">
+        <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3">
+          <div className="min-w-0">
+            <p className="truncate font-bold">{view.title}</p>
+            <p className={`text-xs ${view.violation_count ? 'font-semibold text-danger' : 'text-muted'}`}>
+              Pelanggaran {view.violation_count}/{view.max_violations}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <ThemeToggle compact />
+            <Clock deadline={deadline} offset={offset} />
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <ThemeToggle compact />
-          <p className={`font-mono text-lg font-bold ${remaining < 10_000 ? 'text-danger' : ''}`}>{clock(remaining)}</p>
+        {/* progress: questions done (per question) or answered (total) */}
+        <div className="h-1 bg-subtle">
+          <div
+            className="h-full bg-primary transition-[width] duration-300"
+            style={{ width: `${(100 * (view.timer_mode === 'per_question' ? view.current_index : answered)) / Math.max(1, view.total)}%` }}
+          />
         </div>
       </header>
 
-      {notice && <p className="bg-warn-soft px-4 py-2 text-sm">{notice}</p>}
+      {notice && <p className="bg-warn-soft px-4 py-2 text-center text-sm">{notice}</p>}
 
       <main className="mx-auto max-w-2xl space-y-6 p-4 pb-10">
         {view.timer_mode === 'per_question' ? (
           current && (
             <section className="space-y-4">
-              <p className="text-sm text-muted">
+              <p className="text-sm font-semibold text-muted">
                 Soal {view.current_index + 1} dari {view.total}
               </p>
               <QuestionCard q={current} selected={pickedChoice} onPick={(choice) => setPicked({ id: current.id, choice })} />
@@ -238,7 +240,7 @@ export default function ExamClient({ id }: { id: string }) {
                 disabled={pickedChoice === null || busy}
                 onClick={() => pickedChoice !== null && answerCurrent(current.id, pickedChoice)}
                 aria-busy={busy}
-                className={`relative w-full rounded bg-red-600 p-3 font-semibold text-white ${pickedChoice === null ? 'opacity-40' : ''}`}
+                className="btn btn-primary w-full"
               >
                 <PendingLabel pending={busy}>{view.current_index + 1 === view.total ? 'Jawab & selesai' : 'Jawab & lanjut'}</PendingLabel>
               </button>
@@ -248,26 +250,26 @@ export default function ExamClient({ id }: { id: string }) {
           <>
             {view.questions.map((q, i) => (
               <section key={q.id} className="space-y-2">
-                <p className="text-sm text-muted">Soal {i + 1}</p>
+                <p className="text-sm font-semibold text-muted">Soal {i + 1}</p>
                 <QuestionCard q={q} selected={view.answers[q.id] ?? null} onPick={(choice) => answerTotal(q.id, choice)} />
               </section>
             ))}
             {confirming ? (
-              <div className="rounded-lg border border-danger-line bg-danger-soft p-4">
+              <div className="card border-danger-line p-4">
                 <p>
                   {answered} dari {view.total} soal terjawab. Kumpulkan sekarang? Jawaban tidak bisa diubah lagi.
                 </p>
                 <div className="mt-3 flex gap-2">
-                  <button onClick={() => setConfirming(false)} className="flex-1 rounded border border-line-strong bg-surface p-3">
+                  <button onClick={() => setConfirming(false)} className="btn btn-secondary flex-1">
                     Batal
                   </button>
-                  <button disabled={busy} aria-busy={busy} onClick={submit} className="relative flex-1 rounded bg-red-600 p-3 font-semibold text-white">
+                  <button disabled={busy} aria-busy={busy} onClick={submit} className="btn btn-primary flex-1">
                     <PendingLabel pending={busy}>Kumpulkan</PendingLabel>
                   </button>
                 </div>
               </div>
             ) : (
-              <button onClick={() => setConfirming(true)} className="w-full rounded bg-red-600 p-3 font-semibold text-white">
+              <button onClick={() => setConfirming(true)} className="btn btn-primary w-full">
                 Kumpulkan jawaban
               </button>
             )}
@@ -276,8 +278,13 @@ export default function ExamClient({ id }: { id: string }) {
       </main>
 
       {locked && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 p-6 text-center text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 p-6 text-center text-white">
           <div className="max-w-sm space-y-4">
+            <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-red-600/20 text-red-400">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01" />
+              </svg>
+            </span>
             <p className="text-lg font-bold">{warning ? 'Peringatan' : 'Layar ujian terkunci'}</p>
             <p>{warning || 'Ketuk tombol di bawah untuk kembali ke layar penuh dan melanjutkan ujian.'}</p>
             <button
@@ -285,7 +292,7 @@ export default function ExamClient({ id }: { id: string }) {
                 enterFullscreen()
                 setWarning('')
               }}
-              className="w-full rounded bg-white p-3 font-semibold text-slate-900"
+              className="btn w-full bg-white text-slate-900 hover:bg-slate-100"
             >
               Saya mengerti, lanjutkan
             </button>
@@ -298,13 +305,43 @@ export default function ExamClient({ id }: { id: string }) {
 
 const cheer = (score: number) => (score >= 80 ? 'Luar biasa!' : score >= 60 ? 'Kerja bagus!' : 'Terima kasih sudah berjuang!')
 
-function Submitted({ view, serverNow }: Readonly<{ view: ExamView; serverNow: number }>) {
-  // The only way to reach the limit is the auto-submit, so no party for that.
-  const celebrate = view.violation_count < view.max_violations
+// Ticks every 250 ms. Only the small clock components use it, so the question list doesn't
+// re-render four times a second.
+function useNow() {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 250)
+    return () => clearInterval(t)
+  }, [])
+  return now
+}
+
+function Clock({ deadline, offset }: Readonly<{ deadline: number; offset: number }>) {
+  const remaining = Math.max(0, deadline - (useNow() + offset))
+  return (
+    <p role="timer" className={`rounded-lg px-2.5 py-1 font-mono text-lg font-bold tabular-nums ${remaining < 10_000 ? 'bg-danger-soft text-danger' : 'bg-subtle'}`}>
+      {clock(remaining)}
+    </p>
+  )
+}
+
+// Countdown to the moment scores are released for everyone.
+function ReleaseCountdown({ at, offset }: Readonly<{ at: number; offset: number }>) {
+  const left = Math.max(0, at - (useNow() + offset))
+  return (
+    <>
+      <p role="timer" className="my-2 font-mono text-5xl font-bold tabular-nums text-primary">
+        {clock(left)}
+      </p>
+      <p className="text-sm text-muted">{left ? 'Menunggu peserta lain menyelesaikan ujian. Biarkan halaman ini terbuka.' : 'Mengambil nilai…'}</p>
+    </>
+  )
+}
+
+function Submitted({ view, offset }: Readonly<{ view: ExamView; offset: number }>) {
+  const celebrate = view.submit_reason !== 'violation'
   const title = celebrate ? 'Selamat, kamu sudah selesai! 🎉' : 'Ujian dikumpulkan otomatis'
-  // ms until scores are released for everyone (null while the session is still open)
-  const resultsIn = view.results_at === null ? null : Math.max(0, view.results_at - serverNow)
-  if (view.score === undefined && resultsIn === null) {
+  if (view.score === undefined && view.results_at === null) {
     return (
       <Notice
         title={title}
@@ -318,41 +355,50 @@ function Submitted({ view, serverNow }: Readonly<{ view: ExamView; serverNow: nu
     return (
       <Notice title={title} body="Jawaban terkirim. Nilai semua peserta muncul serentak dalam">
         {celebrate && <Confetti />}
-        <p className="font-mono text-5xl font-bold" aria-live="polite">
-          {clock(resultsIn ?? 0)}
-        </p>
-        <p className="text-sm text-muted">
-          {resultsIn ? 'Menunggu peserta lain menyelesaikan ujian. Biarkan halaman ini terbuka.' : 'Mengambil nilai…'}
-        </p>
+        <ReleaseCountdown at={view.results_at ?? 0} offset={offset} />
       </Notice>
     )
   }
   return (
     <Notice title={view.title} body={`${view.name} · ${view.nim}`}>
       {celebrate && <Confetti key="score" /> /* new key: replay the burst when the score arrives */}
-      <p className="mt-4 text-sm text-muted">Nilaimu</p>
-      <p className="pop-in text-6xl font-bold">{view.score}</p>
-      {celebrate && <p className="pop-in mt-2 text-lg font-semibold text-danger [animation-delay:300ms]">🎉 {cheer(view.score)}</p>}
+      <p className="mt-4 text-sm font-semibold uppercase tracking-wide text-muted">Nilaimu</p>
+      <p className="pop-in mx-auto flex size-32 items-center justify-center rounded-full bg-danger-soft text-6xl font-extrabold text-primary tabular-nums ring-8 ring-danger-soft/50">
+        {view.score}
+      </p>
+      {celebrate && <p className="pop-in mt-2 text-lg font-bold [animation-delay:300ms]">🎉 {cheer(view.score)}</p>}
     </Notice>
   )
 }
 
 function QuestionCard({ q, selected, onPick }: { q: PublicQuestion; selected: number | null; onPick: (choice: number) => void }) {
   return (
-    <div className="rounded-lg border border-line bg-surface p-4">
-      <p className="mb-3 whitespace-pre-line font-medium">{q.text}</p>
-      <div className="grid gap-2">
-        {q.options.map((option, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => onPick(i)}
-            className={`rounded border p-3 text-left ${selected === i ? 'border-red-600 bg-danger-soft font-semibold' : 'border-line-strong'}`}
-          >
-            {q.type === 'mc' && <span className="mr-2">{String.fromCharCode(65 + i)}.</span>}
-            {option}
-          </button>
-        ))}
+    <div className="card p-4 sm:p-5">
+      <p className="mb-4 whitespace-pre-line font-medium leading-relaxed">{q.text}</p>
+      <div className="grid gap-2.5">
+        {q.options.map((option, i) => {
+          const on = selected === i
+          return (
+            <button
+              key={i}
+              type="button"
+              aria-pressed={on}
+              onClick={() => onPick(i)}
+              className={`flex min-h-12 min-w-0 items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
+                on ? 'border-primary bg-danger-soft font-semibold' : 'border-line hover:border-line-strong'
+              }`}
+            >
+              {q.type === 'mc' && (
+                <span
+                  className={`flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-bold ${on ? 'bg-primary text-on-primary' : 'bg-subtle'}`}
+                >
+                  {String.fromCharCode(65 + i)}.
+                </span>
+              )}
+              <span className="min-w-0">{option}</span>
+            </button>
+          )
+        })}
       </div>
     </div>
   )

@@ -16,6 +16,31 @@ export function useAntiCheat(active: boolean, onViolation: (type: string) => voi
     return () => BLOCKED.forEach((t) => document.removeEventListener(t, block))
   }, [])
 
+  // Keep the screen on: a phone that auto-locks while someone reads a question would count as leaving.
+  // The lock is dropped whenever the page is hidden, so take it again on return.
+  useEffect(() => {
+    if (!active || !('wakeLock' in navigator)) return
+    let lock: WakeLockSentinel | undefined
+    let done = false
+    const acquire = () => {
+      if (document.visibilityState !== 'visible') return
+      navigator.wakeLock.request('screen').then(
+        (l) => {
+          if (done) l.release().catch(() => {})
+          else lock = l
+        },
+        () => {},
+      )
+    }
+    acquire()
+    document.addEventListener('visibilitychange', acquire)
+    return () => {
+      done = true
+      document.removeEventListener('visibilitychange', acquire)
+      lock?.release().catch(() => {})
+    }
+  }, [active])
+
   useEffect(() => {
     if (!active) return
     let last = 0

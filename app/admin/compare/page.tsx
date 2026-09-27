@@ -23,9 +23,9 @@ export default async function ComparePage(props: PageProps<'/admin/compare'>) {
   const result = known(pre) && known(post) ? compareScores(await scores(pre), await scores(post)) : null
 
   const picker = (name: 'pre' | 'post', value: unknown) => (
-    <label className="grid gap-1 text-sm">
+    <label className="grid min-w-0 gap-1.5 text-sm font-semibold">
       {name === 'pre' ? 'Pre-test' : 'Post-test'}
-      <select name={name} defaultValue={typeof value === 'string' ? value : ''} required className="rounded border border-line-strong bg-surface p-2">
+      <select name={name} defaultValue={typeof value === 'string' ? value : ''} required className="field w-full min-w-0 font-normal">
         <option value="" disabled>
           Pilih sesi
         </option>
@@ -41,43 +41,52 @@ export default async function ComparePage(props: PageProps<'/admin/compare'>) {
   )
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-4">
-      <header>
-        <Link href="/admin" className="text-sm underline">
+    <main className="mx-auto max-w-4xl space-y-6 p-4 pb-12">
+      <header className="pt-2">
+        <Link href="/admin" className="text-sm font-semibold text-muted hover:text-fg">
           ← Semua sesi <LinkPending />
         </Link>
-        <h1 className="mt-1 text-xl font-bold">Bandingkan pre-test vs post-test</h1>
+        <h1 className="mt-2 text-2xl font-extrabold tracking-tight">Bandingkan pre-test vs post-test</h1>
       </header>
 
-      <Form action="/admin/compare" className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]">
+      <Form action="/admin/compare" className="card grid items-end gap-3 p-4 sm:grid-cols-[1fr_1fr_auto] sm:p-6">
         {picker('pre', pre)}
         {picker('post', post)}
-        <SubmitButton className="rounded bg-red-600 px-4 py-2 font-semibold text-white">Bandingkan</SubmitButton>
+        <SubmitButton className="btn btn-primary">Bandingkan</SubmitButton>
       </Form>
 
       {result && (
         <>
-          <p className="text-sm">
-            Rata-rata pre: <b>{show(result.avgPre)}</b> · post: <b>{show(result.avgPost)}</b> · peningkatan: <b>{show(result.avgDelta)}</b>
-          </p>
-          <div className="overflow-x-auto rounded border border-line bg-surface">
+          <dl className="grid grid-cols-3 gap-3">
+            {[
+              ['Rata-rata pre', result.avgPre],
+              ['Rata-rata post', result.avgPost],
+              ['Peningkatan', result.avgDelta],
+            ].map(([label, value]) => (
+              <div key={label} className="card p-4">
+                <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</dt>
+                <dd className="mt-1 text-2xl font-extrabold tabular-nums">{show(value as number | null)}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="card overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-subtle text-left">
+              <thead className="bg-subtle text-left text-xs uppercase tracking-wide text-muted">
                 <tr>
-                  <th className="p-2">Nama</th>
-                  <th className="p-2">NIM</th>
-                  <th className="p-2">Pre</th>
-                  <th className="p-2">Post</th>
-                  <th className="p-2">Selisih</th>
+                  <th className="p-3">Nama</th>
+                  <th className="p-3">NIM</th>
+                  <th className="p-3">Pre</th>
+                  <th className="p-3">Post</th>
+                  <th className="p-3">Selisih</th>
                 </tr>
               </thead>
               <tbody>
                 {result.rows.map((r) => (
                   <tr key={r.nim} className="border-t border-line">
-                    <td className="p-2">{r.name}</td>
-                    <td className="p-2">{r.nim}</td>
-                    <td className="p-2">{show(r.pre)}</td>
-                    <td className="p-2">{show(r.post)}</td>
+                    <td className="p-3">{r.name}</td>
+                    <td className="p-3">{r.nim}</td>
+                    <td className="p-3">{show(r.pre)}</td>
+                    <td className="p-3">{show(r.post)}</td>
                     <td className={`p-2 ${r.delta !== null && r.delta < 0 ? 'text-danger' : ''}`}>
                       {r.delta === null ? '–' : r.delta > 0 ? `+${r.delta}` : r.delta}
                     </td>

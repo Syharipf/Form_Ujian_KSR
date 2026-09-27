@@ -19,7 +19,7 @@ export default function ResultLink({ code }: Readonly<{ code: string }>) {
   const id = useSyncExternalStore(noSubscribe, () => stored(`result:${code}`), () => null)
   if (!id) return null
   return (
-    <Link href={`/exam/${id}`} className="block w-full rounded border border-line-strong bg-surface p-3 text-center font-semibold">
+    <Link href={`/exam/${id}`} className="btn btn-secondary w-full">
       Lihat nilai ujianmu <LinkPending />
     </Link>
   )

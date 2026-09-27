@@ -144,6 +144,27 @@ try {
   assert.ok(await d.page.locator('div[aria-hidden][style*="data:image/svg+xml"]').count())
   log('exam page blocks context menu / copy / selection and shows the watermark')
 
+  const crafted = await d.page.request.post(`${BASE}/api/attempts/${d.page.url().split('/exam/')[1]}/violation`, { data: { type: '__proto__' } })
+  assert.equal(crafted.status(), 400)
+  log('a crafted violation type is rejected')
+
+  // In-app browsers (Instagram, LINE, …) refuse fullscreen; the exam must still be usable, not locked.
+  const inApp = await (await browser.newContext({ ...devices['Pixel 7'] })).newPage()
+  await inApp.addInitScript(() => {
+    Element.prototype.requestFullscreen = () => Promise.reject(new TypeError('Fullscreen is not allowed'))
+  })
+  await inApp.goto(`${BASE}/s/${pre.code}`)
+  assert.equal(await inApp.locator('.old-browser-note').isVisible(), false)
+  await inApp.fill('input[name=name]', 'Eka')
+  await inApp.fill('input[name=nim]', '1006')
+  await inApp.click('text=Mulai ujian')
+  await inApp.getByText(/Pelanggaran 0\//).waitFor()
+  assert.equal(await inApp.getByText('Layar ujian terkunci').count(), 0)
+  await inApp.click('text=Kumpulkan jawaban')
+  await inApp.getByRole('button', { name: 'Kumpulkan', exact: true }).click()
+  await inApp.getByText('Selamat, kamu sudah selesai!').waitFor()
+  log('a browser that refuses fullscreen can still take the exam; no outdated-browser note on modern browsers')
+
   // --- admin results ------------------------------------------------------
   await adminPage.goto(pre.url)
   const row = (name: string) => adminPage.locator('tbody tr', { hasText: name })
@@ -169,6 +190,11 @@ try {
   await adminPage.getByText('Peserta direset').waitFor()
   assert.equal(await row('Cici').count(), 0)
   log('question editing locked while attempts exist; single reset works')
+
+  await adminPage.fill('input[name=per_question_sec]', '30')
+  await adminPage.getByRole('button', { name: 'Simpan pengaturan', exact: true }).click()
+  await adminPage.getByText('timer terkunci karena sudah ada peserta').waitFor()
+  log('timer settings are locked while attempts exist')
 
   // --- per-question mode ----------------------------------------------------
   const post = await createSession(adminPage, 'Post-test E2E', 'post', 'per_question', 5)

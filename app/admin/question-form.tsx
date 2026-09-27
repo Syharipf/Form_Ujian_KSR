@@ -5,7 +5,7 @@ import SubmitButton from '@/app/submit-button'
 import type { Question } from '@/lib/exam'
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E']
-const input = 'rounded border border-line-strong bg-surface p-2'
+const input = 'field'
 
 // Manual add/edit form. Field names match the CSV columns so the server reuses the CSV validator.
 export default function QuestionForm({
@@ -68,7 +68,7 @@ export default function QuestionForm({
           </select>
         </label>
       )}
-      <SubmitButton className="rounded bg-red-600 p-2 font-semibold text-white">{submitLabel}</SubmitButton>
+      <SubmitButton className="btn btn-primary">{submitLabel}</SubmitButton>
     </form>
   )
 }
