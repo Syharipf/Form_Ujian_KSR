@@ -13,14 +13,20 @@ async function fetchAttempt(id: string): Promise<Attempt | null> {
   return must(await db().from('attempts').select('*').eq('id', id).maybeSingle())
 }
 
+type AttemptRow = Attempt & { session: Session & { questions: Question[] } }
+
+// One request: the attempt with its session and questions embedded. Under load the number of Supabase
+// requests is the bottleneck (the free tier serves roughly 40 per second), not the queries themselves.
 export async function loadCtx(id: string): Promise<Ctx> {
-  const attempt = UUID.test(id) ? await fetchAttempt(id) : null
-  if (!attempt) throw new ExamError(404, 'Ujian tidak ditemukan. Mungkin sudah direset panitia — scan ulang QR.')
-  const [session, questions] = await Promise.all([
-    db().from('exam_sessions').select('*').eq('id', attempt.session_id).single().then(must),
-    db().from('questions').select('*').eq('session_id', attempt.session_id).then(must),
-  ])
-  return { attempt, session, questions: Object.fromEntries((questions as Question[]).map((q) => [q.id, q])) }
+  const row: AttemptRow | null = UUID.test(id)
+    ? must(await db().from('attempts').select('*, session:exam_sessions(*, questions(*))').eq('id', id).maybeSingle())
+    : null
+  if (!row) throw new ExamError(404, 'Ujian tidak ditemukan. Mungkin sudah direset panitia — scan ulang QR.')
+  const {
+    session: { questions, ...session },
+    ...attempt
+  } = row
+  return { attempt, session, questions: Object.fromEntries(questions.map((q) => [q.id, q])) }
 }
 
 export async function finalize(ctx: Ctx, reason: SubmitReason, now: Date) {
@@ -60,22 +66,25 @@ export async function sync(ctx: Ctx, now: Date) {
 // Scores are released to everyone at once, only after the session is closed AND nobody is still
 // working, so early finishers can't leak anything to those still taking the exam. While someone is
 // still working, `at` is the latest of their deadlines: the countdown participants see.
-export async function resultsStatus(session: Session): Promise<ResultsStatus> {
-  if (session.is_open) return { released: false, at: null }
-  await finalizeExpired(session.id)
-  const last: { deadline_at: string } | null = must(
-    await db()
-      .from('attempts')
-      .select('deadline_at')
-      .eq('session_id', session.id)
-      .is('submitted_at', null)
-      .order('deadline_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  )
-  // finalizeExpired settles an attempt only once it is more than GRACE_MS past its deadline; release
-  // a second after that so the check made at the countdown's end finds nobody still working.
-  return last ? { released: false, at: Date.parse(last.deadline_at) + GRACE_MS + 1000 } : { released: true, at: null }
+async function lookupResults(sessionId: string): Promise<ResultsStatus> {
+  const working = await settleExpired(sessionId)
+  // An attempt is settled only once it is more than GRACE_MS past its deadline; release a second
+  // after that so the check made at the countdown's end finds nobody still working.
+  return working.length ? { released: false, at: Math.max(...working) + GRACE_MS + 1000 } : { released: true, at: null }
+}
+
+// Everyone waiting asks at the same moment when the countdown ends, so concurrent requests on one
+// server instance share a single lookup for a second instead of querying once per participant.
+const recent = new Map<string, { until: number; status: Promise<ResultsStatus> }>()
+
+export function resultsStatus(session: Session): Promise<ResultsStatus> {
+  if (session.is_open) return Promise.resolve({ released: false, at: null })
+  const hit = recent.get(session.id)
+  if (hit && hit.until > Date.now()) return hit.status
+  const status = lookupResults(session.id)
+  recent.set(session.id, { until: Date.now() + 1000, status })
+  status.catch(() => recent.delete(session.id))
+  return status
 }
 
 export async function view(ctx: Ctx, now: Date) {
@@ -83,11 +92,25 @@ export async function view(ctx: Ctx, now: Date) {
   return buildView(ctx.attempt, ctx.session, ctx.questions, now, results)
 }
 
-// Participants who closed the browser never trigger their own timeout; settle them for the results page.
-export async function finalizeExpired(sessionId: string) {
-  const cutoff = new Date(Date.now() - GRACE_MS).toISOString()
-  const stale: { id: string }[] = must(
-    await db().from('attempts').select('id').eq('session_id', sessionId).is('submitted_at', null).lt('deadline_at', cutoff),
+// Participants who closed the browser never trigger their own timeout: settle every attempt whose
+// time ran out, and return the deadlines of those still working.
+async function settleExpired(sessionId: string) {
+  const cutoff = Date.now() - GRACE_MS
+  const unsubmitted: { id: string; deadline_at: string }[] = must(
+    await db().from('attempts').select('id, deadline_at').eq('session_id', sessionId).is('submitted_at', null),
   )
-  await Promise.all(stale.map(async ({ id }) => sync(await loadCtx(id), new Date())))
+  const working = await Promise.all(
+    unsubmitted.map(async ({ id, deadline_at }) => {
+      const deadline = Date.parse(deadline_at)
+      if (deadline >= cutoff) return deadline
+      const ctx = await loadCtx(id)
+      await sync(ctx, new Date())
+      return ctx.attempt.submitted_at ? null : deadline // per-question takers can run past deadline_at
+    }),
+  )
+  return working.filter((d): d is number => d !== null)
+}
+
+export async function finalizeExpired(sessionId: string) {
+  await settleExpired(sessionId)
 }
