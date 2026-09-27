@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import Notice from '@/app/notice'
 import { PendingLabel } from '@/app/pending'
 import ThemeToggle from '@/app/theme-toggle'
-import { GRACE_MS, type ExamView, type PublicQuestion } from '@/lib/exam'
+import { clock, GRACE_MS, type ExamView, type PublicQuestion } from '@/lib/exam'
 import { enterFullscreen, exitFullscreen, isFullscreen, subscribeFullscreen } from '@/lib/fullscreen'
 import Confetti from './confetti'
 import { useAntiCheat } from './use-anti-cheat'
@@ -47,11 +47,6 @@ function nextResultCheck(untilRelease: number | null) {
   if (untilRelease === null || untilRelease > RESULT_POLL_MS) return RESULT_POLL_MS
   if (untilRelease > 0) return untilRelease
   return RESULT_RETRY_MS
-}
-
-const clock = (ms: number) => {
-  const s = Math.ceil(ms / 1000)
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
 
 // Submitted but score not released yet: check back until it is (re-armed after every check, even a

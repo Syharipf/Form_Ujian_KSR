@@ -20,6 +20,12 @@ export interface Session {
 // '2026-09-27' → '27 Sep 2026'. A bare date parses as UTC midnight, so format in UTC.
 export const formatDate = (ymd: string) => new Date(ymd).toLocaleDateString('id-ID', { dateStyle: 'medium', timeZone: 'UTC' })
 
+// ms → 'm:ss', rounding up so a countdown shows 0:00 only when time is really up.
+export const clock = (ms: number) => {
+  const s = Math.ceil(ms / 1000)
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
 export interface Question {
   id: string
   session_id: string
