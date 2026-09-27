@@ -4,17 +4,6 @@
    instead of raw palette colors so both themes stay in sync.
    Theme: <html data-theme="light|dark"> is the user's choice (theme-toggle.tsx);
    no attribute means "follow the device". */
-@custom-variant dark {
-  &:where([data-theme="dark"], [data-theme="dark"] *) {
-    @slot;
-  }
-  @media (prefers-color-scheme: dark) {
-    &:where(:root:not([data-theme]), :root:not([data-theme]) *) {
-      @slot;
-    }
-  }
-}
-
 :root {
   color-scheme: light dark;
   --page: var(--color-slate-50);
@@ -84,6 +73,26 @@
   --color-danger-line: var(--danger-line);
   --color-warn-soft: var(--warn-soft);
   --color-ok: var(--ok);
+}
+
+/* Watermark tint per theme (app/exam/[id]/watermark.tsx). Plain CSS rather than a Tailwind
+   dark: variant, which would need the non-standard @custom-variant/@slot at-rules. */
+.watermark-dark {
+  display: none;
+}
+:root[data-theme="dark"] .watermark-light {
+  display: none;
+}
+:root[data-theme="dark"] .watermark-dark {
+  display: block;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .watermark-light {
+    display: none;
+  }
+  :root:not([data-theme]) .watermark-dark {
+    display: block;
+  }
 }
 
 /* Exam page: no text selection, no long-press menu (copy / "Search with Google Lens"). */
