@@ -4,10 +4,16 @@ import { db, must } from '@/lib/db'
 import type { Session } from '@/lib/exam'
 import { createSession, logout } from './actions'
 import SessionForm from './session-form'
+import SetupError from './setup-error'
 
 export default async function AdminHome() {
   await requireAdmin()
-  const sessions: Session[] = must(await db().from('exam_sessions').select('*').order('created_at', { ascending: false }))
+  let sessions: Session[]
+  try {
+    sessions = must(await db().from('exam_sessions').select('*').order('created_at', { ascending: false }))
+  } catch (error) {
+    return <SetupError error={error} />
+  }
 
   return (
     <main className="mx-auto max-w-3xl space-y-8 p-4">
