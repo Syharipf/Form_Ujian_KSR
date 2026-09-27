@@ -5,7 +5,7 @@
 <h1 align="center">UjiKSR</h1>
 
 <p align="center">
-  Web ujian <b>pre-test & post-test</b> dengan anti-cheat untuk <b>KSR PMI Universitas Telkom</b>.<br>
+  Web ujian <b>pre-test & post-test</b> dengan anti-cheat untuk <b>KSR PMI Unit Universitas Telkom</b>.<br>
   Peserta masuk lewat scan QR dari HP. Panitia mengelola sesi, soal, dan nilai dari satu panel.
 </p>
 
@@ -207,4 +207,4 @@ docs/                    buku panduan + screenshot
 
 ---
 
-<p align="center"><sub>Dibuat untuk KSR PMI Universitas Telkom.</sub></p>
+<p align="center"><sub>Dibuat untuk KSR PMI Unit Universitas Telkom.</sub></p>
