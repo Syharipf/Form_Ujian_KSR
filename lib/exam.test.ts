@@ -6,6 +6,7 @@ import {
   ExamError,
   grade,
   GRACE_MS,
+  isOpen,
   originalIndex,
   planAnswer,
   settle,
@@ -44,6 +45,7 @@ const session = (over: Partial<Session> = {}): Session => ({
   per_question_sec: 30,
   max_violations: 3,
   is_open: true,
+  closes_at: null,
   ...over,
 })
 
@@ -115,6 +117,16 @@ describe('deadlineFor', () => {
   it('uses the duration in total mode and n × per-question time otherwise', () => {
     expect(deadlineFor(session(), 10, new Date(T0)).getTime()).toBe(T0 + 600_000)
     expect(deadlineFor(session({ timer_mode: 'per_question' }), 10, new Date(T0)).getTime()).toBe(T0 + 300_000)
+  })
+})
+
+describe('isOpen', () => {
+  it('closes on its own once closes_at passes; without it only by hand', () => {
+    const closes_at = new Date(T0).toISOString()
+    expect(isOpen(session({ closes_at }), T0 - 1)).toBe(true)
+    expect(isOpen(session({ closes_at }), T0)).toBe(false)
+    expect(isOpen(session(), T0 + 1e9)).toBe(true)
+    expect(isOpen(session({ is_open: false }), T0)).toBe(false)
   })
 })
 

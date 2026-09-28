@@ -65,12 +65,17 @@ export async function sync(ctx: Ctx, now: Date) {
 
 // Scores are released to everyone at once, only after the session is closed AND nobody is still
 // working, so early finishers can't leak anything to those still taking the exam. While someone is
-// still working, `at` is the latest of their deadlines: the countdown participants see.
-async function lookupResults(sessionId: string): Promise<ResultsStatus> {
-  const working = await settleExpired(sessionId)
+// still working or the session is still taking participants, `at` is when that ends: the countdown
+// participants see.
+async function lookupResults(session: Session): Promise<ResultsStatus> {
+  const working = await settleExpired(session.id)
+  // Not before the session closes on its own (plus slack for a join still in flight), so nobody can
+  // start after the scores are out.
+  const closes = session.is_open && session.closes_at ? Date.parse(session.closes_at) + GRACE_MS : 0
+  if (!working.length && Date.now() >= closes) return { released: true, at: null }
   // An attempt is settled only once it is more than GRACE_MS past its deadline; release a second
   // after that so the check made at the countdown's end finds nobody still working.
-  return working.length ? { released: false, at: Math.max(...working) + GRACE_MS + 1000 } : { released: true, at: null }
+  return { released: false, at: Math.max(closes, ...working.map((d) => d + GRACE_MS + 1000)) }
 }
 
 // Everyone waiting asks at the same moment when the countdown ends, so concurrent requests on one
@@ -78,10 +83,11 @@ async function lookupResults(sessionId: string): Promise<ResultsStatus> {
 const recent = new Map<string, { until: number; status: Promise<ResultsStatus> }>()
 
 export function resultsStatus(session: Session): Promise<ResultsStatus> {
-  if (session.is_open) return Promise.resolve({ released: false, at: null })
+  // Opened without an end time (before sessions closed on their own): wait for "Tutup sesi".
+  if (session.is_open && !session.closes_at) return Promise.resolve({ released: false, at: null })
   const hit = recent.get(session.id)
   if (hit && hit.until > Date.now()) return hit.status
-  const status = lookupResults(session.id)
+  const status = lookupResults(session)
   recent.set(session.id, { until: Date.now() + 1000, status })
   status.catch(() => recent.delete(session.id))
   return status

@@ -3,7 +3,7 @@ import LinkPending from '@/app/link-pending'
 import SubmitButton from '@/app/submit-button'
 import { requireAdmin } from '@/lib/admin-auth'
 import { db, must } from '@/lib/db'
-import { formatDate, type Session } from '@/lib/exam'
+import { formatDate, isOpen, type Session } from '@/lib/exam'
 import { createSession, logout } from './actions'
 import SessionForm from './session-form'
 import SetupError from './setup-error'
@@ -38,7 +38,7 @@ export default async function AdminHome() {
                   </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
-                  <span className={`badge ${s.is_open ? 'bg-ok-soft text-ok' : 'bg-subtle text-muted'}`}>{s.is_open ? 'Dibuka' : 'Ditutup'}</span>
+                  <span className={`badge ${isOpen(s) ? 'bg-ok-soft text-ok' : 'bg-subtle text-muted'}`}>{isOpen(s) ? 'Dibuka' : 'Ditutup'}</span>
                   <LinkPending />
                 </span>
               </Link>

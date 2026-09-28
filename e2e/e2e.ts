@@ -224,8 +224,8 @@ try {
     if (n === 3) await p.page.getByText('Soal 4 dari 4').waitFor()
   }
   await p.page.getByText('Jawaban terkirim').waitFor()
-  await p.page.getByText('Nilai akan muncul di halaman ini').waitFor()
-  log('per-question: last answer finishes the exam; score is withheld while the session is open')
+  await p.page.getByText('Nilai semua peserta muncul serentak dalam').waitFor()
+  log('per-question: last answer finishes the exam; score is withheld while the session is open, with a countdown')
 
   await adminPage.goto(post.url)
   assert.match(await row('Ani').innerText(), /1001\s+75\s+0\s+Selesai/)
@@ -237,6 +237,20 @@ try {
   await adminPage.goto(`${BASE}/admin/compare?pre=${preId}&post=${postId}`)
   assert.match(await adminPage.locator('tbody tr', { hasText: 'Ani' }).innerText(), /1001\s+100\s+75\s+-25/)
   log('compare page joins pre/post by NIM with delta')
+
+  // --- automatic close ---------------------------------------------------------------
+  // Opening started a 4 × 5 s clock: the session closes by itself and, with nobody working,
+  // the waiting participant's score appears without a reload.
+  await adminPage.goto(post.url)
+  await adminPage.getByText('Tutup otomatis dalam').waitFor()
+  await adminPage.getByText('Sesi ditutup otomatis').waitFor({ timeout: 30_000 }) // auto-refresh, no reload
+  await p.page.getByText('Nilaimu').waitFor({ timeout: 35_000 })
+  const shut = await (await browser.newContext()).newPage()
+  await shut.goto(`${BASE}/s/${post.code}`)
+  await shut.getByText('Sesi ini belum dibuka atau sudah ditutup.').waitFor()
+  log('session closes on its own after its duration; the score then appears without a reload')
+  await adminPage.getByRole('button', { name: 'Buka sesi', exact: true }).click()
+  await adminPage.getByText('Sesi dibuka —').waitFor()
 
   // --- closed session and score release -------------------------------------------
   // Budi is still working (per-question, 4 × 5 s) when the session closes and never answers, so
@@ -252,10 +266,11 @@ try {
   await sleep(1500)
   assert.notEqual(await adminClock.innerText(), before)
   log('admin sees a live countdown to the score release')
+  const seen = p.views.length // her score was out once already, before the session reopened
   await p.page.reload()
   await p.page.getByText('Nilai semua peserta muncul serentak dalam').waitFor()
   assert.match(await p.page.locator('main p.font-mono').innerText(), /^0:[0-2]\d$/)
-  assert.ok(p.views.every((v) => !v.includes('"score"')))
+  assert.ok(p.views.slice(seen).every((v) => !v.includes('"score"')))
   log('after closing, a finished participant sees a countdown to the shared release time')
 
   // No reloads from here: both pages must pick the score up on their own.

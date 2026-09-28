@@ -36,7 +36,7 @@ UjiKSR adalah web untuk menjalankan pre-test dan post-test diklat KSR. Peserta c
 2. Panitia **membuka sesi** dan menayangkan QR-nya.
 3. Peserta scan QR, mengisi nama + NIM, dan mengerjakan soal dalam layar penuh.
 4. Panitia memantau nilai dan pelanggaran secara langsung.
-5. Panitia **menutup sesi**. Setelah semua peserta selesai, nilai muncul serentak di HP masing-masing.
+5. Sesi **tutup otomatis** setelah durasi ujian (atau ditutup panitia lebih awal). Setelah semua peserta selesai, nilai muncul serentak di HP masing-masing.
 6. Setelah post-test, panitia **membandingkan** hasil pre-test dan post-test.
 
 **Istilah**
@@ -115,6 +115,7 @@ Untuk share screen (Zoom/Meet) atau proyektor, klik **Tayangkan QR & kode**. Hal
 
 - Link di bawah QR juga bisa dibagikan ke grup peserta.
 - Selama sesi **ditutup**, peserta tidak bisa memulai ujian.
+- Sesi **tutup otomatis** setelah durasi ujian, dihitung sejak **Buka sesi** ditekan (mode total: durasi total; mode per soal: jumlah soal × waktu per soal). Halaman sesi menampilkan hitung mundurnya. Jadi tekan **Buka sesi** saat peserta siap mulai, bukan saat briefing.
 - Peserta juga bisa masuk dengan mengetik kode sesi di halaman depan **ujiksr.vercel.app**.
 
 ---
@@ -144,11 +145,11 @@ Klik angka di kolom **Pelanggaran** untuk melihat log-nya: jam kejadian dan jeni
 
 ### 3.3 Menutup sesi dan merilis nilai
 
-Klik **Tutup sesi** saat waktu ujian selesai. Peserta baru tidak bisa masuk lagi.
+Sesi tutup sendiri setelah durasi ujian sejak dibuka. Panitia juga bisa menutupnya lebih awal dengan **Tutup sesi**, atau membukanya lagi dengan **Buka sesi** (hitung mundurnya mulai dari awal). Setelah sesi tutup, peserta baru tidak bisa masuk lagi. Peserta yang sudah mulai tetap mendapat waktu penuh.
 
 Nilai baru muncul di HP peserta kalau **sesi sudah ditutup dan semua peserta sudah selesai**. Jadi peserta yang selesai duluan tidak bisa membocorkan nilai atau jawaban ke yang masih mengerjakan.
 
-- Kalau saat sesi ditutup masih ada yang mengerjakan, semua peserta yang sudah selesai melihat **hitung mundur** sampai waktu peserta terakhir habis. Setelah itu nilai muncul serentak.
+- Peserta yang sudah selesai melihat **hitung mundur** sampai sesi tutup dan waktu peserta terakhir habis. Setelah itu nilai muncul serentak, tanpa perlu refresh.
 - Panitia melihat hitung mundur yang sama di halaman sesi, beserta jam rilisnya.
 - Setelah nilai muncul, halaman sesi menampilkan *Nilai sudah terlihat oleh peserta di HP masing-masing*.
 
@@ -224,7 +225,7 @@ Setiap pelanggaran memunculkan peringatan. Tekan **Saya mengerti, lanjutkan** un
 
 ### 4.5 Selesai dan melihat nilai
 
-Setelah jawaban terkirim, muncul ucapan selamat. Nilai muncul **serentak untuk semua peserta** setelah panitia menutup sesi dan semua peserta selesai. Kalau masih ada yang mengerjakan, kamu melihat hitung mundur. Biarkan halaman terbuka, dan nilai akan muncul sendiri.
+Setelah jawaban terkirim, muncul ucapan selamat dan hitung mundur. Nilai muncul **serentak untuk semua peserta** setelah sesi tutup dan semua peserta selesai. Biarkan halaman terbuka, dan nilai akan muncul sendiri.
 
 <table align="center">
   <tr>
@@ -256,7 +257,7 @@ Kalau halaman sudah telanjur ditutup, buka lagi QR/link yang sama di HP yang sam
 - [ ] Awasi ruangan. Aplikasi tidak bisa mendeteksi foto dari HP kedua atau contekan langsung.
 
 **Setelah selesai**
-- [ ] Klik **Tutup sesi**, lalu tunggu semua peserta selesai sampai nilai muncul.
+- [ ] Tunggu sesi tutup otomatis (atau klik **Tutup sesi**) dan semua peserta selesai sampai nilai muncul.
 - [ ] **Export CSV** untuk arsip.
 - [ ] Setelah post-test, buka **Bandingkan pre-test vs post-test**.
 
@@ -302,12 +303,12 @@ Satu kejadian yang memicu beberapa sinyal sekaligus hanya dihitung **sekali** (j
 | Masalah | Penyebab & solusi |
 |---|---|
 | *"Sesi tidak ditemukan"* | Kode salah ketik. Scan ulang QR atau cek kode di proyektor. |
-| *"Sesi ini belum dibuka atau sudah ditutup"* | Panitia belum menekan **Buka sesi**, atau sesi sudah ditutup. |
+| *"Sesi ini belum dibuka atau sudah ditutup"* | Panitia belum menekan **Buka sesi**, atau sesi sudah ditutup (termasuk tutup otomatis setelah durasi ujian). Panitia bisa menekan **Buka sesi** lagi. |
 | *"NIM ini sudah memulai ujian di sesi ini"* | NIM itu sudah dipakai di sesi ini. Panitia bisa menekan **Reset** di baris peserta tersebut. |
 | *"Soal belum tersedia"* | Sesi dibuka tapi soalnya belum diisi. Panitia perlu menambah soal. |
 | *"Ujian tidak ditemukan… scan ulang QR"* | Pengerjaan peserta sudah di-reset panitia. Scan QR lagi dan mulai ulang. |
 | Layar terus terkunci | Tekan **Saya mengerti, lanjutkan**. Kalau link dibuka dari aplikasi lain (Instagram/LINE), buka ulang di Chrome atau Safari. |
-| Nilai belum muncul | Sesi belum ditutup, atau masih ada peserta yang mengerjakan (lihat hitung mundur). Biarkan halaman terbuka, atau buka lagi link-nya nanti. |
+| Nilai belum muncul | Sesi belum tutup, atau masih ada peserta yang mengerjakan (lihat hitung mundur). Biarkan halaman terbuka, atau buka lagi link-nya nanti. |
 | Muncul *"Browser ini terlalu lama"* | Perbarui Chrome/Safari, atau pakai HP lain. Minimal Chrome 111 atau iOS 16.4. |
 | Kunci jawaban ternyata salah setelah ujian | Soal terkunci selama ada peserta dan nilai dihitung saat jawaban dikumpulkan. Export CSV lalu koreksi manual, atau **Reset semua**, perbaiki soal, dan ulangi ujiannya (semua jawaban hilang). Karena itu, periksa kunci sebelum membuka sesi. |
 | Panel admin: *"Database belum bisa diakses"* | Project Supabase ter-*pause* atau konfigurasi berubah. Buka dashboard Supabase dan klik *Restore project*, lalu coba lagi. |

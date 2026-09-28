@@ -1,6 +1,6 @@
 import { handle, readJson } from '@/lib/api'
 import { db, must } from '@/lib/db'
-import { buildOrder, deadlineFor, ExamError, type Question, type Session } from '@/lib/exam'
+import { buildOrder, deadlineFor, ExamError, isOpen, type Question, type Session } from '@/lib/exam'
 
 export async function POST(req: Request) {
   return handle(async () => {
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     const session: (Session & { questions: Question[] }) | null = must(
       await db().from('exam_sessions').select('*, questions(*)').eq('code', code).maybeSingle(),
     )
-    if (!session?.is_open) throw new ExamError(403, 'Sesi tidak ditemukan atau sudah ditutup')
+    if (!session || !isOpen(session)) throw new ExamError(403, 'Sesi tidak ditemukan atau sudah ditutup')
     const { questions } = session
     if (!questions.length) throw new ExamError(400, 'Soal belum tersedia. Hubungi panitia.')
 

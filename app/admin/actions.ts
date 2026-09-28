@@ -7,7 +7,7 @@ import { requireAdmin } from '@/lib/admin-auth'
 import { COOKIE, makeToken, passwordMatches, TTL_MS } from '@/lib/admin-token'
 import { parseQuestionsCsv, toQuestion } from '@/lib/csv'
 import { db, must } from '@/lib/db'
-import type { Session } from '@/lib/exam'
+import { deadlineFor, type Session } from '@/lib/exam'
 
 const back = (id: string, msg: string) => redirect(`/admin/sessions/${id}?msg=${encodeURIComponent(msg)}`)
 
@@ -84,9 +84,17 @@ export async function updateSession(id: string, formData: FormData) {
   back(id, 'Pengaturan tersimpan')
 }
 
+// Opening starts the clock: the session takes participants for as long as the exam itself lasts.
 export async function setOpen(id: string, open: boolean) {
   await requireAdmin()
-  must(await db().from('exam_sessions').update({ is_open: open }).eq('id', id))
+  let closes_at = null
+  if (open) {
+    const s: Pick<Session, TimerField> & { questions: { count: number }[] } = must(
+      await db().from('exam_sessions').select('timer_mode, duration_sec, per_question_sec, questions(count)').eq('id', id).single(),
+    )
+    closes_at = deadlineFor(s, s.questions[0]?.count ?? 0, new Date()).toISOString()
+  }
+  must(await db().from('exam_sessions').update({ is_open: open, closes_at }).eq('id', id))
   back(id, open ? 'Sesi dibuka' : 'Sesi ditutup')
 }
 

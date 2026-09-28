@@ -5,7 +5,7 @@ import Brand from '@/app/brand'
 import { requireAdmin } from '@/lib/admin-auth'
 import { UUID } from '@/lib/attempts'
 import { db, must } from '@/lib/db'
-import { formatDate, type Session } from '@/lib/exam'
+import { formatDate, isOpen, type Session } from '@/lib/exam'
 import { AutoRefresh, FullscreenButton } from '../live'
 
 // Share-screen / projector view: only what participants need to join. The session page itself must
@@ -14,8 +14,8 @@ export default async function QrDisplayPage(props: PageProps<'/admin/sessions/[i
   await requireAdmin()
   const { id } = await props.params
   if (!UUID.test(id)) notFound()
-  const session: Pick<Session, 'title' | 'code' | 'kind' | 'held_on' | 'is_open'> | null = must(
-    await db().from('exam_sessions').select('title, code, kind, held_on, is_open').eq('id', id).maybeSingle(),
+  const session: Pick<Session, 'title' | 'code' | 'kind' | 'held_on' | 'is_open' | 'closes_at'> | null = must(
+    await db().from('exam_sessions').select('title, code, kind, held_on, is_open, closes_at').eq('id', id).maybeSingle(),
   )
   if (!session) notFound()
 
@@ -50,8 +50,8 @@ export default async function QrDisplayPage(props: PageProps<'/admin/sessions/[i
             </p>
             <p className="font-mono text-6xl font-extrabold tracking-[0.15em] text-primary lg:text-8xl">{session.code}</p>
           </div>
-          <p className={`badge text-base ${session.is_open ? 'bg-ok-soft text-ok' : 'bg-subtle text-muted'}`}>
-            {session.is_open ? 'Sesi dibuka — silakan mulai' : 'Sesi belum dibuka'}
+          <p className={`badge text-base ${isOpen(session) ? 'bg-ok-soft text-ok' : 'bg-subtle text-muted'}`}>
+            {isOpen(session) ? 'Sesi dibuka — silakan mulai' : session.is_open ? 'Sesi sudah ditutup' : 'Sesi belum dibuka'}
           </p>
         </div>
       </div>
