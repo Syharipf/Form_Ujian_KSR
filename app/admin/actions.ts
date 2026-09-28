@@ -48,15 +48,10 @@ function sessionFields(f: FormData) {
   if (!title || title.length > 120 || !['pre', 'post'].includes(kind) || !['total', 'per_question'].includes(timer_mode)) {
     throw new Error('Data sesi tidak valid')
   }
-  return {
-    title,
-    held_on,
-    kind,
-    timer_mode,
-    duration_sec: int('duration_min', 1, 600) * 60,
-    per_question_sec: int('per_question_sec', 5, 600),
-    max_violations: int('max_violations', 1, 20),
-  }
+  // Only the chosen mode's time: the form disables (so doesn't send) the other, which keeps its stored value.
+  const time: Partial<Pick<Session, 'duration_sec' | 'per_question_sec'>> =
+    timer_mode === 'total' ? { duration_sec: int('duration_min', 1, 600) * 60 } : { per_question_sec: int('per_question_sec', 5, 600) }
+  return { title, held_on, kind, timer_mode, ...time, max_violations: int('max_violations', 1, 20) }
 }
 
 export async function createSession(formData: FormData) {
@@ -78,7 +73,7 @@ export async function updateSession(id: string, formData: FormData) {
   // changing them underneath would move deadlines or let per-question takers go back.
   if (await hasAttempts(id)) {
     const current: Pick<Session, TimerField> = must(await db().from('exam_sessions').select(TIMER_FIELDS.join(',')).eq('id', id).single())
-    if (TIMER_FIELDS.some((key) => fields[key] !== current[key])) return back(id, TIMER_LOCKED)
+    if (TIMER_FIELDS.some((key) => key in fields && fields[key] !== current[key])) return back(id, TIMER_LOCKED)
   }
   must(await db().from('exam_sessions').update(fields).eq('id', id))
   back(id, 'Pengaturan tersimpan')
