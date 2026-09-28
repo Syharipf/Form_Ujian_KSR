@@ -10,7 +10,6 @@ import { enterFullscreen, exitFullscreen } from '@/lib/fullscreen'
 import ResultLink from './result-link'
 
 type Props = {
-  host: string // typed by hand in an incognito tab, where a scanned QR doesn't open
   session: Pick<Session, 'code' | 'title' | 'kind' | 'timer_mode' | 'duration_sec' | 'per_question_sec' | 'max_violations'>
 }
 
@@ -23,10 +22,13 @@ function stored(key: string) {
   }
 }
 
-export default function JoinForm({ host, session }: Props) {
+export default function JoinForm({ session }: Props) {
   const router = useRouter()
   const key = `attempt:${session.code}`
   const existing = useSyncExternalStore(noSubscribe, () => stored(key), () => null)
+  // Set by the exam page after submitting: this phone already took this session, so no second attempt
+  // (with another NIM) from it. It can only open its score.
+  const finished = useSyncExternalStore(noSubscribe, () => stored(`result:${session.code}`), () => null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false) // stays true through the navigation to the exam
   const [resuming, startResume] = useTransition()
@@ -94,10 +96,6 @@ export default function JoinForm({ host, session }: Props) {
           <Rule icon="globe">
             Buka link ini di <b>Chrome</b> (Android) atau <b>Safari</b> (iPhone), bukan dari dalam aplikasi Instagram/LINE/TikTok.
           </Rule>
-          <Rule icon="incognito">
-            HP Android: kerjakan di <b>tab Samaran</b> Chrome (⋮ → Tab samaran baru, ketik <b>{host}</b>, masukkan kode <b>{session.code}</b>),
-            supaya layar ujian tidak bisa direkam atau dibagikan ke aplikasi lain seperti Gemini.
-          </Rule>
         </ul>
       </section>
 
@@ -107,6 +105,8 @@ export default function JoinForm({ host, session }: Props) {
         <button onClick={resume} disabled={resuming} aria-busy={resuming} className="btn btn-primary w-full">
           <PendingLabel pending={resuming}>Lanjutkan ujian</PendingLabel>
         </button>
+      ) : finished ? (
+        <p className="text-center text-sm text-muted">Ujian ini sudah dikerjakan dari HP ini. Satu HP hanya bisa dipakai satu peserta per sesi.</p>
       ) : (
         <form onSubmit={start} className="card space-y-4 p-4">
           <label className="grid gap-1.5 text-sm font-semibold">
@@ -137,7 +137,6 @@ const ICONS = {
   screen: <path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3" />,
   alert: <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01" />,
   globe: <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></>,
-  incognito: <><path d="M2 11h20M5 11l2.2-6.2A1.2 1.2 0 0 1 8.3 4h7.4a1.2 1.2 0 0 1 1.1.8L19 11M10 18a2 2 0 0 1 4 0" /><circle cx="7" cy="18" r="3" /><circle cx="17" cy="18" r="3" /></>,
 }
 
 function Rule({ icon, children }: Readonly<{ icon: keyof typeof ICONS; children: React.ReactNode }>) {

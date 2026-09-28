@@ -1,4 +1,3 @@
-import { headers } from 'next/headers'
 import { connection } from 'next/server'
 import Notice from '@/app/notice'
 import { db, must } from '@/lib/db'
@@ -22,7 +21,6 @@ export default async function SessionPage(props: PageProps<'/s/[code]'>) {
   }
   return (
     <JoinForm
-      host={(await headers()).get('host') ?? ''}
       session={{
         code: session.code,
         title: session.title,
