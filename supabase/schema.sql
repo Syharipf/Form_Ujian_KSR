@@ -6,6 +6,9 @@
 --   alter table exam_sessions add column held_on date;
 --   update exam_sessions set held_on = (created_at at time zone 'Asia/Jakarta')::date;
 --   alter table exam_sessions alter column held_on set not null, alter column held_on set default current_date;
+--
+-- Upgrading a database created before sessions closed on their own? Run just this:
+--   alter table exam_sessions add column closes_at timestamptz;
 
 create table exam_sessions (
   id uuid primary key default gen_random_uuid(),
@@ -18,6 +21,7 @@ create table exam_sessions (
   per_question_sec int not null default 45 check (per_question_sec > 0),
   max_violations int not null default 3 check (max_violations > 0),
   is_open boolean not null default false,
+  closes_at timestamptz, -- set by "Buka sesi": no new participants after this (null = until closed by hand)
   created_at timestamptz not null default now()
 );
 

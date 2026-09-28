@@ -1,7 +1,7 @@
 import { connection } from 'next/server'
 import Notice from '@/app/notice'
 import { db, must } from '@/lib/db'
-import type { Session } from '@/lib/exam'
+import { isOpen, type Session } from '@/lib/exam'
 import JoinForm from './join-form'
 import ResultLink from './result-link'
 
@@ -10,7 +10,7 @@ export default async function SessionPage(props: PageProps<'/s/[code]'>) {
   const code = decodeURIComponent((await props.params).code).trim().toUpperCase()
   const session: Session | null = must(await db().from('exam_sessions').select('*').eq('code', code).maybeSingle())
   if (!session) return <Notice title="Sesi tidak ditemukan" body="Periksa lagi QR atau kode dari panitia." />
-  if (!session.is_open) {
+  if (!isOpen(session)) {
     return (
       <Notice title={session.title} body="Sesi ini belum dibuka atau sudah ditutup.">
         <div className="mt-4">

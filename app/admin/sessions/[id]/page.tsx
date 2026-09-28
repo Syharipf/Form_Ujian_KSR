@@ -5,7 +5,7 @@ import QRCode from 'qrcode'
 import { requireAdmin } from '@/lib/admin-auth'
 import { finalizeExpired, resultsStatus, UUID } from '@/lib/attempts'
 import { db, must } from '@/lib/db'
-import { formatDate, type Attempt, type Question, type ResultsStatus, type Session } from '@/lib/exam'
+import { formatDate, isOpen, type Attempt, type Question, type ResultsStatus, type Session } from '@/lib/exam'
 import { deleteQuestion, deleteSession, resetAllAttempts, resetAttempt, saveQuestion, setOpen, updateSession, uploadQuestions } from '../../actions'
 import LinkPending from '@/app/link-pending'
 import SubmitButton from '@/app/submit-button'
@@ -34,7 +34,7 @@ function ScoreStatus({ results, working, serverNow }: Readonly<{ results: Result
   if (results.at === null) return <>Nilai belum terlihat peserta. Nilai muncul serentak setelah sesi ditutup dan semua peserta selesai.</>
   return (
     <>
-      Nilai belum terlihat peserta: {working} peserta masih mengerjakan. Nilai muncul serentak dalam{' '}
+      Nilai belum terlihat peserta{working > 0 && <>: {working} peserta masih mengerjakan</>}. Nilai muncul serentak dalam{' '}
       <Countdown until={results.at} serverNow={serverNow} /> (pukul {time(new Date(results.at).toISOString())} WIB).
     </>
   )
@@ -65,6 +65,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
   const working = attempts.filter((a) => !a.submitted_at).length
   // eslint-disable-next-line react-hooks/purity -- server component, rendered once per request
   const serverNow = Date.now()
+  const open = isOpen(session, serverNow)
   const byAttempt = Map.groupBy(violations, (v) => v.attempt_id)
 
   const h = await headers()
@@ -79,7 +80,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <h1 className="min-w-0 text-2xl font-extrabold tracking-tight">{session.title}</h1>
-          <span className={`badge ${session.is_open ? 'bg-ok-soft text-ok' : 'bg-subtle text-muted'}`}>{session.is_open ? 'Dibuka' : 'Ditutup'}</span>
+          <span className={`badge ${open ? 'bg-ok-soft text-ok' : 'bg-subtle text-muted'}`}>{open ? 'Dibuka' : 'Ditutup'}</span>
         </div>
         <p className="mt-1 text-sm text-muted">
           {formatDate(session.held_on)} · {session.kind === 'pre' ? 'Pre-test' : 'Post-test'} · kode {session.code}
@@ -87,7 +88,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
       </header>
 
       {/* Joins, answers, violations and the score release only happen while someone can still work. */}
-      {(session.is_open || working > 0) && <AutoRefresh />}
+      {(open || working > 0 || results.at !== null) && <AutoRefresh />}
       {msg && (
         <output className="block rounded-xl bg-warn-soft p-3 text-sm font-medium">{msg}</output>
       )}
@@ -98,15 +99,21 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
         <div className="space-y-3">
           <h2 className="text-lg font-bold">Akses peserta</h2>
           <p className="rounded-lg bg-subtle px-3 py-2 font-mono text-sm break-all">{link}</p>
-          <p className={`font-semibold ${session.is_open ? 'text-ok' : 'text-muted'}`}>
-            {session.is_open ? 'Sesi dibuka — peserta bisa mulai.' : 'Sesi ditutup — peserta belum bisa mulai.'}
+          <p className={`font-semibold ${open ? 'text-ok' : 'text-muted'}`}>
+            {open ? 'Sesi dibuka — peserta bisa mulai.' : session.is_open ? 'Sesi ditutup otomatis — durasi ujian sudah habis.' : 'Sesi ditutup — peserta belum bisa mulai.'}
           </p>
+          {open && session.closes_at && (
+            <p className="text-sm text-muted">
+              Tutup otomatis dalam <Countdown until={Date.parse(session.closes_at)} serverNow={serverNow} /> (pukul {time(session.closes_at)} WIB). Peserta yang sudah mulai
+              tetap mendapat waktu penuh.
+            </p>
+          )}
           <p className="text-sm text-muted">
             <ScoreStatus results={results} working={working} serverNow={serverNow} />
           </p>
           <div className="flex flex-wrap gap-2">
-            <form action={setOpen.bind(null, id, !session.is_open)}>
-              <SubmitButton className={`btn ${session.is_open ? 'btn-secondary' : 'btn-primary'}`}>{session.is_open ? 'Tutup sesi' : 'Buka sesi'}</SubmitButton>
+            <form action={setOpen.bind(null, id, !open)}>
+              <SubmitButton className={`btn ${open ? 'btn-secondary' : 'btn-primary'}`}>{open ? 'Tutup sesi' : 'Buka sesi'}</SubmitButton>
             </form>
             <a href={`/admin/sessions/${id}/qr`} target="_blank" className="btn btn-secondary">
               Tayangkan QR &amp; kode

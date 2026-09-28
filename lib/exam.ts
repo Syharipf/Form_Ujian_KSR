@@ -15,7 +15,12 @@ export interface Session {
   per_question_sec: number
   max_violations: number
   is_open: boolean
+  closes_at: string | null // set when opened: the exam's own duration later, it takes no new participants
 }
+
+// Open = opened by the committee and its duration since opening not yet over.
+export const isOpen = (s: Pick<Session, 'is_open' | 'closes_at'>, now = Date.now()) =>
+  s.is_open && (s.closes_at === null || now < Date.parse(s.closes_at))
 
 // '2026-09-27' → '27 Sep 2026'. A bare date parses as UTC midnight, so format in UTC.
 export const formatDate = (ymd: string) => new Date(ymd).toLocaleDateString('id-ID', { dateStyle: 'medium', timeZone: 'UTC' })

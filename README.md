@@ -46,13 +46,13 @@
 - Dua mode timer: **total** (bebas bolak-balik antar soal) atau **per soal** (tidak bisa kembali ke soal sebelumnya).
 - Soal dan urutan opsi diacak untuk tiap peserta.
 - Timer dan penilaian dihitung server, jadi tidak bisa diakali dari HP.
-- Animasi selamat setelah selesai, dan nilai muncul serentak untuk semua peserta setelah sesi ditutup.
+- Animasi selamat setelah selesai, dan nilai muncul serentak untuk semua peserta setelah sesi tutup, tanpa refresh.
 - Tampilan terang/gelap, nyaman di HP dan laptop.
 
 **Untuk panitia** (`/admin`)
 - Buat sesi pre-test/post-test lengkap dengan tanggal, mode timer, dan batas pelanggaran.
 - Soal lewat form manual atau upload CSV dari Excel/Google Sheets.
-- Halaman **Tayangkan QR & kode** untuk share screen atau proyektor: QR dan kode sesi dalam ukuran besar, tanpa daftar soal dan kunci jawaban. Sesi dibuka/ditutup dengan satu klik.
+- Halaman **Tayangkan QR & kode** untuk share screen atau proyektor: QR dan kode sesi dalam ukuran besar, tanpa daftar soal dan kunci jawaban. Sesi dibuka dengan satu klik dan tutup otomatis setelah durasi ujian.
 - Pantau peserta secara langsung: nilai, status, dan log pelanggaran lengkap dengan jam. Halaman memperbarui diri tiap 10 detik.
 - Hitung mundur sampai nilai tampil di HP peserta.
 - Export hasil ke CSV, reset peserta, hapus sesi.
