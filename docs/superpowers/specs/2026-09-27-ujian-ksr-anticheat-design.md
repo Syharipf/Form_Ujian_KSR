@@ -1,7 +1,7 @@
-# Web Ujian KSR PMI Telkom — Anti-Cheat (Pre/Post Test)
+# Web Ujian KSR PMI Unit Universitas Telkom — Anti-Cheat (Pre/Post Test)
 
 ## Context
-KSR PMI Telkom butuh web ujian pre-test & post-test yang fokus anti-cheat (Google Lens, screenshot, pindah aplikasi, dll.). Peserta pakai HP Android dan masuk lewat scan QR / link. Proyek baru.
+KSR PMI Unit Universitas Telkom butuh web ujian pre-test & post-test yang fokus anti-cheat (Google Lens, screenshot, pindah aplikasi, dll.). Peserta pakai HP Android dan masuk lewat scan QR / link. Proyek baru.
 
 Keputusan yang sudah diambil:
 - Perangkat: HP Android, **web saja** di browser (tanpa APK) supaya mudah.

@@ -9,7 +9,7 @@ export default function Brand({ subtitle = 'KSR PMI Unit Universitas Telkom' }: 
         <p className="text-lg font-extrabold tracking-tight">
           Uji<span className="text-primary">KSR</span>
         </p>
-        <p className="truncate text-xs text-muted">{subtitle}</p>
+        <p className="text-xs text-muted">{subtitle}</p>
       </div>
     </div>
   )

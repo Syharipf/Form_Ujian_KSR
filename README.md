@@ -23,6 +23,7 @@
   <img alt="Tailwind CSS 4" src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white">
   <img alt="Bun" src="https://img.shields.io/badge/Bun-runtime-000000?logo=bun&logoColor=white">
   <img alt="Vercel" src="https://img.shields.io/badge/deploy-Vercel-000000?logo=vercel&logoColor=white">
+  <a href="LICENSE"><img alt="Lisensi MIT" src="https://img.shields.io/badge/lisensi-MIT-blue"></a>
 </p>
 
 <table align="center">
@@ -204,6 +205,12 @@ docs/                    buku panduan + screenshot
 - **[Buku Panduan](docs/PANDUAN.md)** untuk panitia dan peserta: langkah demi langkah, checklist hari-H, dan pemecahan masalah.
 - [Spesifikasi desain](docs/superpowers/specs/2026-09-27-ujian-ksr-anticheat-design.md)
 - [`CLAUDE.md`](CLAUDE.md): catatan arsitektur untuk pengembang.
+
+## Lisensi
+
+Kode dirilis dengan [lisensi MIT](LICENSE) © 2026 Syarif & KSR PMI Unit Universitas Telkom: boleh dipakai, diubah, dan disebarkan, asal mencantumkan pemberitahuan hak cipta dan lisensi.
+
+Lambang PMI (`public/logo.png`) **tidak** termasuk dalam lisensi ini. Lambang tersebut milik Palang Merah Indonesia dan penggunaannya diatur UU No. 1 Tahun 2018 tentang Kepalangmerahan. Kalau kamu memakai kode ini untuk organisasi lain, ganti logonya.
 
 ---
 
