@@ -189,6 +189,11 @@ body {
   .field:focus {
     border-color: var(--primary);
   }
+  .field:disabled {
+    background: var(--subtle);
+    color: var(--muted);
+    cursor: not-allowed;
+  }
   .badge {
     display: inline-flex;
     align-items: center;

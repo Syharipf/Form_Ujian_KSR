@@ -37,8 +37,10 @@ async function createSession(page: Page, title: string, kind: 'pre' | 'post', mo
   await page.fill('input[name=title]', title)
   await page.selectOption('select[name=kind]', kind)
   await page.selectOption('select[name=timer_mode]', mode)
-  await page.fill('input[name=duration_min]', '10')
-  await page.fill('input[name=per_question_sec]', String(perQuestion))
+  // Only the chosen mode's time field is editable.
+  const [used, unused] = mode === 'total' ? ['duration_min', 'per_question_sec'] : ['per_question_sec', 'duration_min']
+  assert.ok(await page.locator(`input[name=${unused}]`).isDisabled())
+  await page.fill(`input[name=${used}]`, mode === 'total' ? '10' : String(perQuestion))
   await page.getByRole('button', { name: 'Buat sesi', exact: true }).click()
   await page.waitForURL(/\/admin\/sessions\//)
   const code = (await page.locator('text=/kode [A-Z0-9]{6}/').innerText()).match(/kode ([A-Z0-9]{6})/)![1]
@@ -49,7 +51,7 @@ async function createSession(page: Page, title: string, kind: 'pre' | 'post', mo
   await page.click('text=Buka sesi')
   await page.getByText('Sesi dibuka —').waitFor()
   assert.ok(await page.locator('img[alt^="QR http"]').isVisible())
-  log(`session ${title} (${mode}) created, 4 questions uploaded, opened, QR shown → ${code}`)
+  log(`session ${title} (${mode}, other mode's time field disabled) created, 4 questions uploaded, opened, QR shown → ${code}`)
   return { code, url: page.url().split('?')[0] }
 }
 
@@ -200,7 +202,7 @@ try {
   assert.equal(await row('Cici').count(), 0)
   log('question editing locked while attempts exist; single reset works')
 
-  await adminPage.fill('input[name=per_question_sec]', '30')
+  await adminPage.fill('input[name=duration_min]', '20')
   await adminPage.getByRole('button', { name: 'Simpan pengaturan', exact: true }).click()
   await adminPage.getByText('timer terkunci karena sudah ada peserta').waitFor()
   log('timer settings are locked while attempts exist')

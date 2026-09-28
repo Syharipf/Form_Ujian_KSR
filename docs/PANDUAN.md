@@ -73,8 +73,8 @@ Di halaman **Sesi ujian**, isi form **Buat sesi baru**, lalu klik **Buat sesi**.
 | **Tanggal sesi** | Tanggal pelaksanaan. Dipakai untuk mengurutkan dan membedakan sesi. |
 | **Jenis** | *Pre-test* atau *Post-test*. Menentukan sesi mana yang bisa dibandingkan. |
 | **Mode timer** | *Per soal*: tiap soal punya waktu dan tidak bisa kembali; paling ketat. *Total*: satu waktu untuk semua soal dan bebas bolak-balik. |
-| **Durasi total** | 1–600 menit. Hanya dipakai di mode total. |
-| **Waktu per soal** | 5–600 detik. Hanya dipakai di mode per soal. Total waktunya = waktu per soal × jumlah soal. |
+| **Durasi total** | 1–600 menit. Hanya dipakai di mode total; tidak bisa diisi kalau mode per soal dipilih. |
+| **Waktu per soal** | 5–600 detik. Hanya dipakai di mode per soal; tidak bisa diisi kalau mode total dipilih. Total waktunya = waktu per soal × jumlah soal. |
 | **Batas pelanggaran** | 1–20. Pada pelanggaran ke-*N*, jawaban dikumpulkan otomatis. Rekomendasi: 3. |
 
 Setelah dibuat, kamu langsung masuk ke halaman sesi. Kode sesi dibuat otomatis (6 karakter, tanpa huruf O/I dan angka 0/1 supaya tidak tertukar).
