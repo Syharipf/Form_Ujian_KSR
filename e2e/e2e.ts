@@ -110,6 +110,12 @@ try {
   assert.ok(a.views.length > 0 && a.views.every((v) => !v.includes('answer_index') && !v.includes('"score"')))
   log('total mode: answer all, confirm, submit, celebration shown; API never sent answer key or score')
 
+  await a.page.goto(`${BASE}/s/${pre.code}`)
+  await a.page.getByText('Lihat nilai ujianmu').waitFor()
+  await a.page.getByText('Ujian ini sudah dikerjakan dari HP ini').waitFor()
+  assert.equal(await a.page.getByRole('button', { name: 'Mulai ujian' }).count(), 0)
+  log('a phone that finished the session can open its score but not start another attempt')
+
   // violations → auto-submit
   const b = await participant(browser, pre.code, '=HYPERLINK("http://x")', '1002')
   await pick(b.page, 'Korps Sukarela')

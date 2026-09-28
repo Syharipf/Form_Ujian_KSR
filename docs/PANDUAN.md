@@ -183,14 +183,14 @@ Dari halaman **Sesi ujian**, klik **Bandingkan pre-test vs post-test**, pilih se
 ### 4.1 Sebelum mulai
 
 - Pakai **Chrome** (Android) atau **Safari** (iPhone). Jangan membuka link dari dalam aplikasi Instagram, LINE, atau TikTok.
-- HP Android: kerjakan di **tab Samaran** Chrome (⋮ → **Tab samaran baru**). Di tab Samaran, layar ujian tidak bisa direkam atau dibagikan ke aplikasi lain seperti Gemini.
+- Satu HP hanya bisa dipakai **satu peserta** per sesi. Setelah selesai, HP itu hanya bisa membuka nilai.
 - Pastikan baterai cukup dan internet stabil.
 - Aktifkan mode **Jangan Ganggu** dan tutup aplikasi lain.
 - Siapkan **NIM**. Ketik NIM yang sama persis di pre-test dan post-test.
 
 ### 4.2 Masuk ujian
 
-Scan QR dari panitia, atau buka **ujiksr.vercel.app** lalu ketik kode sesi. Di HP Android, ketik alamat dan kodenya di **tab Samaran**, karena scan QR selalu membuka tab biasa. Baca aturan ujian, isi **Nama lengkap** dan **NIM**, lalu tekan **Mulai ujian**. Layar otomatis masuk mode layar penuh.
+Scan QR dari panitia, atau buka **ujiksr.vercel.app** lalu ketik kode sesi. Baca aturan ujian, isi **Nama lengkap** dan **NIM**, lalu tekan **Mulai ujian**. Layar otomatis masuk mode layar penuh.
 
 <table align="center">
   <tr>
@@ -245,13 +245,12 @@ Kalau halaman sudah telanjur ditutup, buka lagi QR/link yang sama di HP yang sam
 **Sehari sebelumnya (H-1)**
 - [ ] Buka `/admin` supaya database aktif. Project Supabase gratis otomatis *pause* setelah 7 hari tidak dipakai.
 - [ ] Buat sesi pre-test (dan post-test), upload soal, lalu periksa kunci jawaban (✓ hijau).
-- [ ] Uji coba singkat dengan 1 HP Android dan 1 iPhone memakai sesi uji. Di Android, kerjakan di tab Samaran: screenshot harus gagal (layar hitam), dan memanggil Gemini atau Circle to Search harus tercatat sebagai pelanggaran. Hapus sesi uji setelahnya.
+- [ ] Uji coba singkat dengan 1 HP Android dan 1 iPhone memakai sesi uji. Di Android, coba panggil Gemini atau Circle to Search saat ujian: harus tercatat sebagai pelanggaran. Hapus sesi uji setelahnya.
 - [ ] Bagikan [Panduan peserta](#4-panduan-peserta) ke peserta.
 
 **Sebelum mulai**
 - [ ] Pastikan WiFi/sinyal ruangan cukup untuk semua peserta.
 - [ ] Minta peserta mengaktifkan Jangan Ganggu dan memakai Chrome/Safari.
-- [ ] Minta peserta Android membuka ujian di **tab Samaran** Chrome. Cek sekilas: bilah alamat gelap dengan ikon Samaran (topi dan kacamata).
 - [ ] Klik **Buka sesi**, lalu **Tayangkan QR & kode** di tab baru. Share tab itu saja, jangan halaman sesi yang berisi kunci jawaban.
 
 **Selama ujian**
@@ -271,6 +270,7 @@ Kalau halaman sudah telanjur ditutup, buka lagi QR/link yang sama di HP yang sam
 - **Layar penuh wajib.** Kalau peserta keluar, layar ujian terkunci sampai dia kembali ke layar penuh.
 - **Tekan-lama, salin, potong, seleksi teks, dan seret diblokir.** Menu Google Lens dan copy-paste ke AI tidak bisa dipakai.
 - **Watermark** nama + NIM di seluruh layar, sehingga foto atau screenshot yang tersebar bisa dilacak.
+- **Satu HP satu peserta per sesi.** HP yang sudah menyelesaikan ujian hanya bisa membuka nilainya, tidak bisa memulai ujian baru dengan NIM lain. Tanda ini disimpan di browser HP, sedangkan NIM tetap hanya bisa dipakai sekali per sesi.
 - **Layar tetap menyala** selama ujian, supaya tidak ada pelanggaran palsu karena HP terkunci otomatis.
 
 **Dideteksi** (dicatat sebagai pelanggaran, dengan jam dan jenisnya)
@@ -291,13 +291,13 @@ Satu kejadian yang memicu beberapa sinyal sekaligus hanya dihitung **sekali** (j
 - Nilai baru dirilis setelah semua peserta selesai.
 
 **Batasan (tidak bisa dicegah oleh aplikasi web)**
-- Screenshot, rekam layar, atau **share screen**, misalnya Gemini Live yang dinyalakan sebelum ujian lalu ditanya lewat suara. Web tidak bisa mendeteksinya. Di Android, **tab Samaran** Chrome membuat layar ujian hitam saat di-screenshot, direkam, atau dibagikan, kecuali peserta sengaja mengizinkan screenshot Samaran di `chrome://flags`. Di iPhone tidak ada perlindungan serupa.
+- Screenshot, rekam layar, atau **share screen**, misalnya Gemini Live yang dinyalakan sebelum ujian lalu ditanya lewat suara. Web tidak bisa mendeteksinya.
 - Foto layar dari HP lain, termasuk kamera Gemini di HP lain. Watermark membuat pelakunya bisa dilacak.
 - Peserta bertanya ke orang di sebelahnya.
 - **iPhone** tidak mendukung layar penuh untuk web, jadi di iPhone yang terdeteksi adalah pindah aplikasi/tab.
 - Peserta yang paham teknis di **laptop** bisa mematikan deteksi di browser, tapi aturan server (timer, kunci jawaban, urutan soal) tetap tidak bisa diakali.
 
-**Tips pengawasan:** gunakan **mode per soal** untuk ujian yang paling ketat, batasi waktu per soal secukupnya, minta peserta Android memakai tab Samaran, jangan izinkan HP kedua atau earphone di meja, dan tetap tempatkan pengawas di ruangan.
+**Tips pengawasan:** gunakan **mode per soal** untuk ujian yang paling ketat, batasi waktu per soal secukupnya, jangan izinkan HP kedua atau earphone di meja, dan tetap tempatkan pengawas di ruangan.
 
 ---
 
