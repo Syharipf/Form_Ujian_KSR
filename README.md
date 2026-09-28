@@ -207,4 +207,4 @@ docs/                    buku panduan + screenshot
 
 ---
 
-<p align="center"><sub>Dibuat untuk KSR PMI Universitas Telkom.</sub></p>
+<p align="center"><sub>Dibuat untuk KSR PMI Unit Universitas Telkom.</sub></p>
