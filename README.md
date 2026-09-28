@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/logo.png" alt="Logo PMI" width="96" height="96">
+  <img src="public/logo.svg" alt="Logo UjiKSR" width="96" height="96">
 </p>
 
 <h1 align="center">UjiKSR</h1>
