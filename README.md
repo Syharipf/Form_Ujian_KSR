@@ -210,8 +210,6 @@ docs/                    buku panduan + screenshot
 
 Kode dirilis dengan [lisensi MIT](LICENSE) © 2026 Syarif & KSR PMI Unit Universitas Telkom: boleh dipakai, diubah, dan disebarkan, asal mencantumkan pemberitahuan hak cipta dan lisensi.
 
-Lambang PMI (`public/logo.png`) **tidak** termasuk dalam lisensi ini. Lambang tersebut milik Palang Merah Indonesia dan penggunaannya diatur UU No. 1 Tahun 2018 tentang Kepalangmerahan. Kalau kamu memakai kode ini untuk organisasi lain, ganti logonya.
-
 ---
 
 <p align="center"><sub>Dibuat untuk KSR PMI Unit Universitas Telkom.</sub></p>
