@@ -75,7 +75,7 @@
 | **Dideteksi** (dicatat sebagai pelanggaran) | Pindah aplikasi/tab · hilang fokus (notifikasi, overlay) · keluar layar penuh · split screen / jendela mengecil · reload atau membuka ulang ujian. Pelanggaran ke-*N* mengumpulkan jawaban otomatis. |
 | **Dijaga server** | Timer dari server · soal dan opsi diacak per peserta · kunci jawaban tidak pernah dikirim ke HP · 1 NIM = 1 kali per sesi · mode per soal tidak bisa kembali · nilai baru muncul setelah semua selesai |
 
-**Keterbatasan aplikasi web:** tidak bisa memblokir screenshot atau foto dari HP lain. Watermark membantu melacak siapa yang menyebarkan. iPhone tidak mendukung layar penuh, jadi di sana yang terdeteksi adalah pindah aplikasi/tab. Pengawas di ruangan tetap perlu. Rinciannya ada di [Buku Panduan](docs/PANDUAN.md#6-anti-cheat-secara-rinci).
+**Keterbatasan aplikasi web:** tidak bisa memblokir screenshot, rekam/share layar (misalnya ke Gemini), atau foto dari HP lain. Di Android, peserta diminta memakai tab Samaran Chrome, yang membuat layar ujian hitam saat direkam atau dibagikan. Watermark membantu melacak siapa yang menyebarkan. iPhone tidak mendukung layar penuh, jadi di sana yang terdeteksi adalah pindah aplikasi/tab. Pengawas di ruangan tetap perlu. Rinciannya ada di [Buku Panduan](docs/PANDUAN.md#6-anti-cheat-secara-rinci).
 
 ## Cara kerja
 

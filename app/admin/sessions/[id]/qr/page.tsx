@@ -50,6 +50,9 @@ export default async function QrDisplayPage(props: PageProps<'/admin/sessions/[i
             </p>
             <p className="font-mono text-6xl font-extrabold tracking-[0.15em] text-primary lg:text-8xl">{session.code}</p>
           </div>
+          <p className="text-base text-secondary lg:text-xl">
+            HP Android: buka <b className="text-fg">tab Samaran</b> di Chrome, lalu ketik alamat dan kode di atas.
+          </p>
           <p className={`badge text-base ${isOpen(session) ? 'bg-ok-soft text-ok' : 'bg-subtle text-muted'}`}>
             {isOpen(session) ? 'Sesi dibuka — silakan mulai' : session.is_open ? 'Sesi sudah ditutup' : 'Sesi belum dibuka'}
           </p>
