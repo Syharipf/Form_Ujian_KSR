@@ -1,7 +1,7 @@
 import Image from 'next/image'
 
 // Logo + app name, used at the top of every page.
-export default function Brand({ subtitle = 'KSR PMI Universitas Telkom' }: Readonly<{ subtitle?: string }>) {
+export default function Brand({ subtitle = 'KSR PMI Unit Universitas Telkom' }: Readonly<{ subtitle?: string }>) {
   return (
     <div className="flex min-w-0 items-center gap-3">
       <Image src="/logo.svg" alt="Logo UjiKSR" width={40} height={40} priority className="size-10 shrink-0" />

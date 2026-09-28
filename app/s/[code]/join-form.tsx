@@ -74,7 +74,7 @@ export default function JoinForm({ session }: Props) {
       </header>
 
       <div className="space-y-2">
-        <span className="badge bg-danger-soft text-danger">{session.kind === 'pre' ? 'Pre-test' : 'Post-test'}</span>
+        <span className="badge bg-primary-soft text-primary">{session.kind === 'pre' ? 'Pre-test' : 'Post-test'}</span>
         <h1 className="text-2xl font-extrabold tracking-tight text-balance">{session.title}</h1>
       </div>
 
@@ -137,7 +137,7 @@ const ICONS = {
 function Rule({ icon, children }: Readonly<{ icon: keyof typeof ICONS; children: React.ReactNode }>) {
   return (
     <li className="flex gap-3">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-danger-soft text-danger">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           {ICONS[icon]}
         </svg>

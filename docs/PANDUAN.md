@@ -5,7 +5,7 @@
 <h1 align="center">Buku Panduan UjiKSR</h1>
 
 <p align="center">
-  Panduan penggunaan web ujian pre-test & post-test <b>KSR PMI Universitas Telkom</b><br>
+  Panduan penggunaan web ujian pre-test & post-test <b>KSR PMI Unit Universitas Telkom</b><br>
   untuk <b>panitia</b> dan <b>peserta</b>.
 </p>
 

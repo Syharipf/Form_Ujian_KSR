@@ -20,11 +20,12 @@
   --warn-soft: var(--color-amber-100);
   --ok: var(--color-green-700);
   --ok-soft: var(--color-green-50);
-  --glow: color-mix(in oklab, var(--color-red-600) 8%, transparent);
-  /* PMI red. White on red-600 is 4.8:1, so buttons stay readable in both themes. */
-  --primary: var(--color-red-600);
-  --primary-hover: var(--color-red-700);
+  /* Logo palette (public/logo.svg): "hijau teks" on light, neon trim on dark. White on #127a35 is 5.4:1. */
+  --primary: #127a35;
+  --primary-hover: #0b5a26;
+  --primary-soft: var(--color-green-50);
   --on-primary: var(--color-white);
+  --glow: color-mix(in oklab, #127a35 8%, transparent);
 }
 :root[data-theme="light"] {
   color-scheme: light;
@@ -47,7 +48,11 @@
   --warn-soft: color-mix(in oklab, var(--color-amber-500) 25%, transparent);
   --ok: var(--color-green-400);
   --ok-soft: color-mix(in oklab, var(--color-green-500) 18%, transparent);
-  --glow: color-mix(in oklab, var(--color-red-600) 16%, transparent);
+  --primary: #3cf06e;
+  --primary-hover: #6cf592;
+  --primary-soft: color-mix(in oklab, #3cf06e 14%, transparent);
+  --on-primary: #0f1f16;
+  --glow: color-mix(in oklab, #3cf06e 10%, transparent);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
@@ -65,7 +70,11 @@
     --warn-soft: color-mix(in oklab, var(--color-amber-500) 25%, transparent);
     --ok: var(--color-green-400);
     --ok-soft: color-mix(in oklab, var(--color-green-500) 18%, transparent);
-    --glow: color-mix(in oklab, var(--color-red-600) 16%, transparent);
+    --primary: #3cf06e;
+    --primary-hover: #6cf592;
+    --primary-soft: color-mix(in oklab, #3cf06e 14%, transparent);
+    --on-primary: #0f1f16;
+    --glow: color-mix(in oklab, #3cf06e 10%, transparent);
   }
 }
 
@@ -85,11 +94,12 @@
   --color-ok: var(--ok);
   --color-ok-soft: var(--ok-soft);
   --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
   --color-on-primary: var(--on-primary);
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* A faint red glow at the top of every page: brand colour without competing with content. */
+/* A faint green glow at the top of every page: brand colour without competing with content. */
 body {
   /* Long unbroken text (links, pasted names) wraps instead of pushing the page sideways on phones.
      Flex/grid items holding such text also need min-w-0. (Not `anywhere`: that lets flex squeeze
@@ -146,7 +156,7 @@ body {
   .btn-primary:hover:not(:disabled) {
     background: var(--primary-hover);
   }
-  /* Faded red reads as "error" in dark mode; grey reads as "not yet". */
+  /* A faded brand colour looks broken; grey reads as "not yet". */
   .btn-primary:disabled:not([aria-busy="true"]) {
     background: var(--subtle);
     color: var(--muted);
