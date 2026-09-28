@@ -4,7 +4,7 @@ import Image from 'next/image'
 export default function Brand({ subtitle = 'KSR PMI Unit Universitas Telkom' }: Readonly<{ subtitle?: string }>) {
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <Image src="/logo.png" alt="Logo PMI" width={40} height={40} priority className="size-10 shrink-0 rounded-full bg-white ring-1 ring-line" />
+      <Image src="/logo.svg" alt="Logo UjiKSR" width={40} height={40} priority className="size-10 shrink-0" />
       <div className="min-w-0 leading-tight">
         <p className="text-lg font-extrabold tracking-tight">
           Uji<span className="text-primary">KSR</span>

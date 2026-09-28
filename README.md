@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/logo.png" alt="Logo PMI" width="96" height="96">
+  <img src="public/logo.svg" alt="Logo UjiKSR" width="96" height="96">
 </p>
 
 <h1 align="center">UjiKSR</h1>
@@ -209,8 +209,6 @@ docs/                    buku panduan + screenshot
 ## Lisensi
 
 Kode dirilis dengan [lisensi MIT](LICENSE) © 2026 Syarif & KSR PMI Unit Universitas Telkom: boleh dipakai, diubah, dan disebarkan, asal mencantumkan pemberitahuan hak cipta dan lisensi.
-
-Lambang PMI (`public/logo.png`) **tidak** termasuk dalam lisensi ini. Lambang tersebut milik Palang Merah Indonesia dan penggunaannya diatur UU No. 1 Tahun 2018 tentang Kepalangmerahan. Kalau kamu memakai kode ini untuk organisasi lain, ganti logonya.
 
 ---
 

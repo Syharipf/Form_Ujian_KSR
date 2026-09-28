@@ -363,7 +363,7 @@ function Submitted({ view, offset }: Readonly<{ view: ExamView; offset: number }
     <Notice title={view.title} body={`${view.name} · ${view.nim}`}>
       {celebrate && <Confetti key="score" /> /* new key: replay the burst when the score arrives */}
       <p className="mt-4 text-sm font-semibold uppercase tracking-wide text-muted">Nilaimu</p>
-      <p className="pop-in mx-auto flex size-32 items-center justify-center rounded-full bg-danger-soft text-6xl font-extrabold text-primary tabular-nums ring-8 ring-danger-soft/50">
+      <p className="pop-in mx-auto flex size-32 items-center justify-center rounded-full bg-primary-soft text-6xl font-extrabold text-primary tabular-nums ring-8 ring-primary-soft/50">
         {view.score}
       </p>
       {celebrate && <p className="pop-in mt-2 text-lg font-bold [animation-delay:300ms]">🎉 {cheer(view.score)}</p>}
@@ -385,7 +385,7 @@ function QuestionCard({ q, selected, onPick }: { q: PublicQuestion; selected: nu
               aria-pressed={on}
               onClick={() => onPick(i)}
               className={`flex min-h-12 min-w-0 items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
-                on ? 'border-primary bg-danger-soft font-semibold' : 'border-line hover:border-line-strong'
+                on ? 'border-primary bg-primary-soft font-semibold' : 'border-line hover:border-line-strong'
               }`}
             >
               {q.type === 'mc' && (

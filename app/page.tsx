@@ -21,7 +21,7 @@ export default function Home() {
 
       <div className="my-auto space-y-6">
         <div className="space-y-2">
-          <span className="badge bg-danger-soft text-danger">Pre-test &amp; Post-test</span>
+          <span className="badge bg-primary-soft text-primary">Pre-test &amp; Post-test</span>
           <h1 className="text-3xl font-extrabold tracking-tight text-balance">Siap uji pengetahuan kepalangmerahanmu?</h1>
         </div>
 

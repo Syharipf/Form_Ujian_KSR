@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="../public/logo.png" alt="Logo PMI" width="80" height="80">
+  <img src="../public/logo.svg" alt="Logo UjiKSR" width="80" height="80">
 </p>
 
 <h1 align="center">Buku Panduan UjiKSR</h1>
