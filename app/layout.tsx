@@ -15,6 +15,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'UjiKSR',
   description: 'Pre-test dan post-test KSR PMI Unit Universitas Telkom',
+  verification: { google: 'VzgwJR0IT679WZlL3qKO3qYhnjBjQr-xAH608PUysN4' }, // Google Search Console
 }
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
