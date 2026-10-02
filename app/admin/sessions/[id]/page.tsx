@@ -62,6 +62,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
       .then(must) as Promise<Violation[]>,
     resultsStatus(session),
   ])
+  const locked = attempts.length > 0 || session.started_at !== null
   const working = attempts.filter((a) => !a.submitted_at).length
   // eslint-disable-next-line react-hooks/purity -- server component, rendered once per request
   const serverNow = Date.now()
@@ -145,7 +146,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
 
       <section className="card space-y-4 p-4 sm:p-6">
         <h2 className="text-lg font-bold">Soal ({questions.length})</h2>
-        {attempts.length > 0 && <p className="text-sm text-muted">Soal terkunci karena sudah ada peserta. Reset semua peserta untuk mengubah soal.</p>}
+        {locked && <p className="text-sm text-muted">Soal terkunci karena sudah ada peserta atau ujian sudah dimulai. Reset semua peserta untuk mengubah soal.</p>}
         <ol className="space-y-2">
           {questions.map((q, i) => (
             <li key={q.id} className="rounded-xl border border-line p-4 text-sm">
@@ -161,7 +162,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
                   </li>
                 ))}
               </ul>
-              {attempts.length === 0 && (
+              {!locked && (
                 <div className="mt-2 flex flex-wrap items-start gap-3">
                   <details className="min-w-0 flex-1">
                     <summary className="cursor-pointer text-xs underline">Edit</summary>
@@ -181,7 +182,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
           {!questions.length && <li className="text-sm text-muted">Belum ada soal. Tambah manual atau upload CSV di bawah.</li>}
         </ol>
 
-        {attempts.length === 0 && (
+        {!locked && (
           <>
             <details open={!questions.length} className="rounded-xl border border-line p-4">
               <summary className="cursor-pointer font-semibold">+ Tambah soal manual</summary>
@@ -220,8 +221,8 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
 
       <section className="card p-4 sm:p-6">
         <h2 className="mb-4 text-lg font-bold">Pengaturan</h2>
-        {attempts.length > 0 && (
-          <p className="-mt-2 mb-4 text-sm text-muted">Mode timer, durasi, dan waktu per soal terkunci selama ada peserta.</p>
+        {locked && (
+          <p className="-mt-2 mb-4 text-sm text-muted">Mode timer, durasi, dan waktu per soal terkunci karena sudah ada peserta atau ujian sudah dimulai.</p>
         )}
         <SessionForm action={updateSession.bind(null, id)} session={session} submitLabel="Simpan pengaturan" />
         <form action={deleteSession.bind(null, id)} className="mt-6 border-t border-line pt-4">
