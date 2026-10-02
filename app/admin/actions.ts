@@ -94,7 +94,7 @@ export async function setOpen(id: string, open: boolean) {
     const end = s.started_at && deadlineFor(s, s.questions[0]?.count ?? 0, new Date(s.started_at))
     if (end && end.getTime() > Date.now()) fields.closes_at = end.toISOString()
     else if (s.started_at) {
-      await finishRound(id) // finish the last round's leftovers before clearing its clock
+      await finishRound(id, s.started_at) // finish the last round's leftovers before clearing its clock
       fields.started_at = null
     }
     const update = db().from('exam_sessions').update(fields).eq('id', id)

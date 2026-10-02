@@ -141,10 +141,11 @@ export async function finalizeExpired(sessionId: string) {
 }
 
 // Reopening a finished exam starts a new round: whoever is still unsubmitted (inside the grace period, or a
-// closed browser) is done, so the next "Mulai ujian" can't re-time them into it.
-export async function finishRound(sessionId: string) {
+// closed browser) is done, so the next "Mulai ujian" can't re-time them into it. Only the round that started
+// at `startedAt`: a stale second reopen must not end the new lobby's joiners (their clocks start later).
+export async function finishRound(sessionId: string, startedAt: string) {
   const unsubmitted: { id: string }[] = must(
-    await db().from('attempts').select('id').eq('session_id', sessionId).is('submitted_at', null),
+    await db().from('attempts').select('id').eq('session_id', sessionId).is('submitted_at', null).lte('started_at', startedAt),
   )
   await Promise.all(
     unsubmitted.map(async ({ id }) => {
