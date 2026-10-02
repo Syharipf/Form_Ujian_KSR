@@ -48,7 +48,7 @@ export default function JoinForm({ session }: Props) {
       const res = await fetch('/api/attempts', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ code: session.code, name: form.get('name'), nim: form.get('nim') }),
+        body: JSON.stringify({ code: session.code, name: form.get('name'), nim: form.get('nim'), prodi: form.get('prodi') }),
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.error ?? 'Gagal memulai ujian')
@@ -84,7 +84,9 @@ export default function JoinForm({ session }: Props) {
       <section className="card p-4 text-sm">
         <h2 className="mb-3 font-bold">Aturan ujian</h2>
         <ul className="space-y-3">
-          <Rule icon="clock">Waktu: {timer}.</Rule>
+          <Rule icon="clock">
+            Waktu: {timer}. Ujian dimulai serentak oleh panitia; yang masuk terlambat hanya mendapat sisa waktu.
+          </Rule>
           <Rule icon="bell">
             Aktifkan mode <b>Jangan Ganggu</b> dan tutup aplikasi lain sebelum mulai.
           </Rule>
@@ -117,13 +119,17 @@ export default function JoinForm({ session }: Props) {
             <span>NIM</span>
             <input name="nim" required maxLength={30} autoComplete="off" className="field font-normal" />
           </label>
+          <label className="grid gap-1.5 text-sm font-semibold">
+            <span>Prodi</span>
+            <input name="prodi" required maxLength={100} placeholder="mis. S1 Informatika" className="field font-normal" />
+          </label>
           {error && (
             <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">
               {error}
             </p>
           )}
           <button type="submit" disabled={busy} aria-busy={busy} className="btn btn-primary w-full">
-            <PendingLabel pending={busy}>Mulai ujian</PendingLabel>
+            <PendingLabel pending={busy}>Masuk ujian</PendingLabel>
           </button>
         </form>
       )}

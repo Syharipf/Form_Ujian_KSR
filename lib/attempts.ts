@@ -1,5 +1,5 @@
 import { db, must } from './db'
-import { buildView, ExamError, grade, GRACE_MS, settle, type Attempt, type Question, type ResultsStatus, type Session, type SubmitReason } from './exam'
+import { buildView, ExamError, grade, GRACE_MS, hasStarted, settle, timing, type Attempt, type Question, type ResultsStatus, type Session, type SubmitReason } from './exam'
 
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -44,9 +44,28 @@ export async function finalize(ctx: Ctx, reason: SubmitReason, now: Date) {
   ctx.attempt = row ?? (await fetchAttempt(ctx.attempt.id))!
 }
 
-// Apply the clock: submit on timeout, skip expired per-question slots.
+// Joined in the lobby but missed the re-time done by "Mulai ujian" (the join landed while it ran):
+// start this clock at the session's start like everyone else's.
+async function retime(ctx: Ctx) {
+  const start = ctx.session.started_at!
+  if (Date.parse(ctx.attempt.started_at) >= Date.parse(start)) return
+  const row = must(
+    await db()
+      .from('attempts')
+      .update(timing(ctx.session, ctx.attempt.question_order.length, new Date(start)))
+      .eq('id', ctx.attempt.id)
+      .lt('started_at', start)
+      .is('submitted_at', null)
+      .select()
+      .maybeSingle(),
+  )
+  ctx.attempt = row ?? (await fetchAttempt(ctx.attempt.id))!
+}
+
+// Apply the clock: submit on timeout, skip expired per-question slots. No clock in the lobby.
 export async function sync(ctx: Ctx, now: Date) {
-  if (ctx.attempt.submitted_at) return
+  if (ctx.attempt.submitted_at || !hasStarted(ctx.session, now.getTime())) return
+  await retime(ctx)
   const s = settle(ctx.attempt, ctx.session, now)
   if (s.finish) return finalize(ctx, s.finish, now)
   if (s.current_index === ctx.attempt.current_index) return
@@ -83,8 +102,8 @@ async function lookupResults(session: Session): Promise<ResultsStatus> {
 const recent = new Map<string, { until: number; status: Promise<ResultsStatus> }>()
 
 export function resultsStatus(session: Session): Promise<ResultsStatus> {
-  // Opened without an end time (before sessions closed on their own): wait for "Tutup sesi".
-  if (session.is_open && !session.closes_at) return Promise.resolve({ released: false, at: null })
+  // Not started, or open without an end time: wait for "Mulai ujian" / "Tutup sesi".
+  if (!session.started_at || (session.is_open && !session.closes_at)) return Promise.resolve({ released: false, at: null })
   const hit = recent.get(session.id)
   if (hit && hit.until > Date.now()) return hit.status
   const status = lookupResults(session)
@@ -111,7 +130,7 @@ async function settleExpired(sessionId: string) {
       if (deadline >= cutoff) return deadline
       const ctx = await loadCtx(id)
       await sync(ctx, new Date())
-      return ctx.attempt.submitted_at ? null : deadline // per-question takers can run past deadline_at
+      return ctx.attempt.submitted_at ? null : Date.parse(ctx.attempt.deadline_at) // per-question takers can run past deadline_at
     }),
   )
   return working.filter((d): d is number => d !== null)

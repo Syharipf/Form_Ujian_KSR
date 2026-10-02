@@ -17,6 +17,7 @@ export async function GET(_req: Request, ctx: RouteContext<'/admin/sessions/[id]
     attempts.map((a) => ({
       nama: a.name,
       nim: a.nim,
+      prodi: a.prodi,
       nilai: a.score ?? '',
       pelanggaran: a.violation_count,
       status: a.submit_reason ? REASON[a.submit_reason] : 'belum selesai',

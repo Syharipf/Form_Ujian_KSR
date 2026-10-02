@@ -9,7 +9,8 @@ const DEBOUNCE_MS = 2000
 const MIN_AREA_RATIO = 0.6
 const BLOCKED = ['contextmenu', 'copy', 'cut', 'selectstart', 'dragstart'] as const
 
-export function useAntiCheat(active: boolean, onViolation: (type: string) => void) {
+// `awake`: hold the screen on (also while waiting in the lobby, so the phone is unlocked when the questions appear).
+export function useAntiCheat(active: boolean, onViolation: (type: string) => void, awake = active) {
   useEffect(() => {
     const block = (e: Event) => e.preventDefault()
     BLOCKED.forEach((t) => document.addEventListener(t, block))
@@ -19,7 +20,7 @@ export function useAntiCheat(active: boolean, onViolation: (type: string) => voi
   // Keep the screen on: a phone that auto-locks while someone reads a question would count as leaving.
   // The lock is dropped whenever the page is hidden, so take it again on return.
   useEffect(() => {
-    if (!active || !('wakeLock' in navigator)) return
+    if (!awake || !('wakeLock' in navigator)) return
     let lock: WakeLockSentinel | undefined
     let done = false
     const acquire = () => {
@@ -39,7 +40,7 @@ export function useAntiCheat(active: boolean, onViolation: (type: string) => voi
       document.removeEventListener('visibilitychange', acquire)
       lock?.release().catch(() => {})
     }
-  }, [active])
+  }, [awake])
 
   useEffect(() => {
     if (!active) return

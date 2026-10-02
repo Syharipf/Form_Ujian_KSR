@@ -5,8 +5,8 @@ import QRCode from 'qrcode'
 import { requireAdmin } from '@/lib/admin-auth'
 import { finalizeExpired, resultsStatus, UUID } from '@/lib/attempts'
 import { db, must } from '@/lib/db'
-import { formatDate, isOpen, type Attempt, type Question, type ResultsStatus, type Session } from '@/lib/exam'
-import { deleteQuestion, deleteSession, resetAllAttempts, resetAttempt, saveQuestion, setOpen, updateSession, uploadQuestions } from '../../actions'
+import { formatDate, hasStarted, isOpen, type Attempt, type Question, type ResultsStatus, type Session } from '@/lib/exam'
+import { deleteQuestion, deleteSession, resetAllAttempts, resetAttempt, saveQuestion, setOpen, startExam, updateSession, uploadQuestions } from '../../actions'
 import LinkPending from '@/app/link-pending'
 import SubmitButton from '@/app/submit-button'
 import QuestionForm from '../../question-form'
@@ -14,7 +14,7 @@ import SessionForm from '../../session-form'
 import { AutoRefresh, Countdown } from './live'
 
 const STATUS = { manual: 'Selesai', timeout: 'Waktu habis', violation: 'Auto-submit (pelanggaran)' } as const
-const STATUS_STYLE = { manual: 'bg-ok-soft text-ok', timeout: 'bg-subtle text-secondary', violation: 'bg-danger-soft text-danger', working: 'bg-warn-soft' }
+const STATUS_STYLE = { manual: 'bg-ok-soft text-ok', timeout: 'bg-subtle text-secondary', violation: 'bg-danger-soft text-danger', working: 'bg-warn-soft', waiting: 'bg-primary-soft text-primary' }
 // A Map, not an object literal: a stored type like '__proto__' must miss, not render Object.prototype.
 const VIOLATION = new Map([
   ['hidden', 'pindah aplikasi/tab'],
@@ -53,7 +53,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
   await finalizeExpired(id)
   const [questions, attempts, violations, results] = await Promise.all([
     db().from('questions').select('*').eq('session_id', id).order('position').then(must) as Promise<Question[]>,
-    db().from('attempts').select('*').eq('session_id', id).order('started_at').then(must) as Promise<Attempt[]>,
+    db().from('attempts').select('*').eq('session_id', id).order('started_at').order('name').then(must) as Promise<Attempt[]>,
     db()
       .from('violations')
       .select('id, attempt_id, type, created_at, attempts!inner(session_id)')
@@ -66,6 +66,8 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
   // eslint-disable-next-line react-hooks/purity -- server component, rendered once per request
   const serverNow = Date.now()
   const open = isOpen(session, serverNow)
+  const lobby = open && !session.started_at
+  const started = hasStarted(session, serverNow)
   const byAttempt = Map.groupBy(violations, (v) => v.attempt_id)
 
   const h = await headers()
@@ -80,7 +82,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <h1 className="min-w-0 text-2xl font-extrabold tracking-tight">{session.title}</h1>
-          <span className={`badge ${open ? 'bg-ok-soft text-ok' : 'bg-subtle text-muted'}`}>{open ? 'Dibuka' : 'Ditutup'}</span>
+          <span className={`badge ${open ? 'bg-ok-soft text-ok' : 'bg-subtle text-muted'}`}>{lobby ? 'Lobi' : open ? 'Berjalan' : 'Ditutup'}</span>
         </div>
         <p className="mt-1 text-sm text-muted">
           {formatDate(session.held_on)} · {session.kind === 'pre' ? 'Pre-test' : 'Post-test'} · kode {session.code}
@@ -100,18 +102,36 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
           <h2 className="text-lg font-bold">Akses peserta</h2>
           <p className="rounded-lg bg-subtle px-3 py-2 font-mono text-sm break-all">{link}</p>
           <p className={`font-semibold ${open ? 'text-ok' : 'text-muted'}`}>
-            {open ? 'Sesi dibuka — peserta bisa mulai.' : session.is_open ? 'Sesi ditutup otomatis — durasi ujian sudah habis.' : 'Sesi ditutup — peserta belum bisa mulai.'}
+            {lobby
+              ? `Lobi dibuka — ${attempts.length} peserta menunggu. Klik "Mulai ujian" saat semua sudah masuk.`
+              : open
+                ? 'Ujian berjalan — peserta yang telat masih bisa masuk dengan sisa waktu.'
+                : session.is_open
+                  ? 'Sesi ditutup otomatis — waktu ujian sudah habis.'
+                  : 'Sesi ditutup — peserta belum bisa masuk.'}
           </p>
+          {open && session.started_at && !started && (
+            <p className="text-sm text-muted">
+              Soal muncul di HP peserta dalam <Countdown until={Date.parse(session.started_at)} serverNow={serverNow} />.
+            </p>
+          )}
           {open && session.closes_at && (
             <p className="text-sm text-muted">
-              Tutup otomatis dalam <Countdown until={Date.parse(session.closes_at)} serverNow={serverNow} /> (pukul {time(session.closes_at)} WIB). Peserta yang sudah mulai
-              tetap mendapat waktu penuh.
+              Ujian berakhir dalam <Countdown until={Date.parse(session.closes_at)} serverNow={serverNow} /> (pukul {time(session.closes_at)} WIB), sama untuk semua
+              peserta.
             </p>
           )}
           <p className="text-sm text-muted">
             <ScoreStatus results={results} working={working} serverNow={serverNow} />
           </p>
           <div className="flex flex-wrap gap-2">
+            {lobby && (
+              <form action={startExam.bind(null, id)}>
+                <SubmitButton confirm={`Mulai ujian untuk ${attempts.length} peserta? Waktu semua peserta mulai berjalan bersamaan.`} className="btn btn-primary">
+                  Mulai ujian
+                </SubmitButton>
+              </form>
+            )}
             <form action={setOpen.bind(null, id, !open)}>
               <SubmitButton className={`btn ${open ? 'btn-secondary' : 'btn-primary'}`}>{open ? 'Tutup sesi' : 'Buka sesi'}</SubmitButton>
             </form>
@@ -237,6 +257,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
               <tr>
                 <th className="p-3">Nama</th>
                 <th className="p-3">NIM</th>
+                <th className="p-3">Prodi</th>
                 <th className="p-3">Nilai</th>
                 <th className="p-3">Pelanggaran</th>
                 <th className="p-3">Status</th>
@@ -248,6 +269,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
                 <tr key={a.id} className="border-t border-line align-top">
                   <td className="p-3">{a.name}</td>
                   <td className="p-3">{a.nim}</td>
+                  <td className="p-3">{a.prodi || '–'}</td>
                   <td className="p-3">{a.score ?? '–'}</td>
                   <td className="p-3">
                     {a.violation_count === 0 ? (
@@ -266,7 +288,9 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
                     )}
                   </td>
                   <td className="p-3">
-                    <span className={`badge ${STATUS_STYLE[a.submit_reason ?? 'working']}`}>{a.submit_reason ? STATUS[a.submit_reason] : 'Mengerjakan'}</span>
+                    <span className={`badge ${STATUS_STYLE[a.submit_reason ?? (started ? 'working' : 'waiting')]}`}>
+                      {a.submit_reason ? STATUS[a.submit_reason] : started ? 'Mengerjakan' : 'Menunggu'}
+                    </span>
                   </td>
                   <td className="p-3">
                     <form action={resetAttempt.bind(null, id, a.id)}>
@@ -279,7 +303,7 @@ export default async function SessionAdminPage(props: PageProps<'/admin/sessions
               ))}
               {!attempts.length && (
                 <tr>
-                  <td colSpan={6} className="p-3 text-muted">
+                  <td colSpan={7} className="p-3 text-muted">
                     Belum ada peserta.
                   </td>
                 </tr>

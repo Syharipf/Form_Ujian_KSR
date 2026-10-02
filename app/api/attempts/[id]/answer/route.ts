@@ -1,7 +1,7 @@
 import { handle, readJson } from '@/lib/api'
 import { finalize, loadCtx, sync, view } from '@/lib/attempts'
 import { db, must } from '@/lib/db'
-import { ExamError, originalIndex, planAnswer, type Attempt } from '@/lib/exam'
+import { ExamError, hasStarted, originalIndex, planAnswer, type Attempt } from '@/lib/exam'
 
 export async function POST(req: Request, ctx: RouteContext<'/api/attempts/[id]/answer'>) {
   return handle(async () => {
@@ -10,6 +10,7 @@ export async function POST(req: Request, ctx: RouteContext<'/api/attempts/[id]/a
     const exam = await loadCtx((await ctx.params).id)
     await sync(exam, now)
     if (exam.attempt.submitted_at) return view(exam, now)
+    if (!hasStarted(exam.session, now.getTime())) throw new ExamError(409, 'Ujian belum dimulai')
 
     const questionId = String(body.question_id ?? '')
     const { expectIndex, nextIndex } = planAnswer(exam.attempt, exam.session, questionId)
