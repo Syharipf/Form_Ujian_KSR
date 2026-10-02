@@ -164,6 +164,14 @@ describe('settle', () => {
     expect(r).toEqual({ current_index: 2, question_started_at: iso(T0 + 60_000), finish: null })
     expect(settle(attempt(), s, new Date(T0 + 90_000 + GRACE_MS)).finish).toBe('timeout')
   })
+
+  it('per-question mode times out at the shared deadline even if the current question has time left', () => {
+    const s = session({ timer_mode: 'per_question' })
+    const a = attempt({ current_index: 2, question_started_at: iso(T0 + 85_000), deadline_at: iso(T0 + 90_000) })
+    expect(settle(a, s, new Date(T0 + 90_000 + GRACE_MS - 1)).finish).toBeNull()
+    expect(settle(a, s, new Date(T0 + 90_000 + GRACE_MS)).finish).toBe('timeout')
+    expect(settle(a, s, new Date(T0 + 90_000 + GRACE_MS + 1)).finish).toBe('timeout')
+  })
 })
 
 describe('planAnswer', () => {
@@ -186,6 +194,12 @@ describe('buildView', () => {
     expect(v.question_deadline_at).toBe(T0 + 30_000)
     expect(JSON.stringify(v)).not.toContain('answer_index')
     expect(JSON.stringify(v)).not.toContain('score')
+  })
+
+  it('caps the per-question deadline at the shared deadline', () => {
+    const a = attempt({ current_index: 2, question_started_at: iso(T0 + 85_000), deadline_at: iso(T0 + 90_000) })
+    const v = buildView(a, session({ timer_mode: 'per_question' }), questions, new Date(T0 + 85_000))
+    expect(v.question_deadline_at).toBe(T0 + 90_000)
   })
 
   it('total mode shows all questions in display order with answers as display indices', () => {

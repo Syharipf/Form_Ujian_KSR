@@ -4,6 +4,7 @@ import { buildOrder, ExamError, isOpen, timing, type Question, type Session } fr
 
 export async function POST(req: Request) {
   return handle(async () => {
+    const now = new Date()
     const body = await readJson(req)
     const code = String(body.code ?? '').trim().toUpperCase()
     const name = String(body.name ?? '').trim()
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
 
     // Latecomers start from the session's start, so they get only the time left. In the lobby the clock
     // is a placeholder from now, re-timed by "Mulai ujian".
-    const start = session.started_at ? new Date(session.started_at) : new Date()
+    const start = session.started_at ? new Date(session.started_at) : now
     const { data, error } = await db()
       .from('attempts')
       .insert({

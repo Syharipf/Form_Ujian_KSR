@@ -87,7 +87,7 @@ export async function sync(ctx: Ctx, now: Date) {
 // still working or the session is still taking participants, `at` is when that ends: the countdown
 // participants see.
 async function lookupResults(session: Session): Promise<ResultsStatus> {
-  const working = await settleExpired(session.id)
+  const working = session.started_at ? await settleExpired(session.id) : []
   // Not before the session closes on its own (plus slack for a join still in flight), so nobody can
   // start after the scores are out.
   const closes = session.is_open && session.closes_at ? Date.parse(session.closes_at) + GRACE_MS : 0
@@ -102,8 +102,8 @@ async function lookupResults(session: Session): Promise<ResultsStatus> {
 const recent = new Map<string, { until: number; status: Promise<ResultsStatus> }>()
 
 export function resultsStatus(session: Session): Promise<ResultsStatus> {
-  // Not started, or open without an end time: wait for "Mulai ujian" / "Tutup sesi".
-  if (!session.started_at || (session.is_open && !session.closes_at)) return Promise.resolve({ released: false, at: null })
+  // Open lobby, or open without an end time: wait for "Mulai ujian" / "Tutup sesi".
+  if (session.is_open && !session.closes_at) return Promise.resolve({ released: false, at: null })
   const hit = recent.get(session.id)
   if (hit && hit.until > Date.now()) return hit.status
   const status = lookupResults(session)
@@ -130,7 +130,7 @@ async function settleExpired(sessionId: string) {
       if (deadline >= cutoff) return deadline
       const ctx = await loadCtx(id)
       await sync(ctx, new Date())
-      return ctx.attempt.submitted_at ? null : Date.parse(ctx.attempt.deadline_at) // per-question takers can run past deadline_at
+      return ctx.attempt.submitted_at ? null : Date.parse(ctx.attempt.deadline_at) // a concurrent start may have re-timed it
     }),
   )
   return working.filter((d): d is number => d !== null)
@@ -138,4 +138,18 @@ async function settleExpired(sessionId: string) {
 
 export async function finalizeExpired(sessionId: string) {
   await settleExpired(sessionId)
+}
+
+// Reopening a finished exam starts a new round: whoever is still unsubmitted (inside the grace period, or a
+// closed browser) is done, so the next "Mulai ujian" can't re-time them into it.
+export async function finishRound(sessionId: string) {
+  const unsubmitted: { id: string }[] = must(
+    await db().from('attempts').select('id').eq('session_id', sessionId).is('submitted_at', null),
+  )
+  await Promise.all(
+    unsubmitted.map(async ({ id }) => {
+      const ctx = await loadCtx(id)
+      await finalize(ctx, 'timeout', new Date())
+    }),
+  )
 }

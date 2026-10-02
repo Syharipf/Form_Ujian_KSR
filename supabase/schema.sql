@@ -13,8 +13,10 @@
 -- Upgrading a database created before the lobby and prodi existed? Run just this, with no exam running
 -- (sessions already used count as started; reopening one gives a fresh lobby):
 --   alter table exam_sessions add column started_at timestamptz;
---   update exam_sessions set started_at = created_at;
+--   update exam_sessions set started_at = created_at where exists (select 1 from attempts where attempts.session_id = exam_sessions.id);
 --   alter table attempts add column prodi text not null default '';
+-- Already ran the earlier version of this upgrade? Also run:
+--   update exam_sessions set started_at = null, closes_at = null where started_at = created_at and not exists (select 1 from attempts where attempts.session_id = exam_sessions.id);
 
 create table exam_sessions (
   id uuid primary key default gen_random_uuid(),
