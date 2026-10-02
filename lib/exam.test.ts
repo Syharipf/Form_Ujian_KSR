@@ -6,11 +6,13 @@ import {
   ExamError,
   grade,
   GRACE_MS,
+  hasStarted,
   isOpen,
   originalIndex,
   planAnswer,
   settle,
   shuffle,
+  timing,
   type Attempt,
   type Question,
   type Session,
@@ -46,6 +48,7 @@ const session = (over: Partial<Session> = {}): Session => ({
   max_violations: 3,
   is_open: true,
   closes_at: null,
+  started_at: '2026-01-01T00:00:00.000Z', // T0
   ...over,
 })
 
@@ -57,6 +60,7 @@ const attempt = (over: Partial<Attempt> = {}): Attempt => ({
   session_id: 's',
   name: 'Budi',
   nim: '123',
+  prodi: 'S1 Informatika',
   question_order: ['q1', 'q2', 'q3'],
   option_orders: { q1: [2, 0, 1, 3], q2: [0, 1], q3: [3, 2, 1, 0] },
   answers: {},
@@ -120,6 +124,24 @@ describe('deadlineFor', () => {
   })
 })
 
+describe('timing', () => {
+  it('starts every clock field at the given start', () => {
+    expect(timing(session({ timer_mode: 'per_question' }), 3, new Date(T0))).toEqual({
+      started_at: iso(T0),
+      question_started_at: iso(T0),
+      deadline_at: iso(T0 + 90_000),
+    })
+  })
+})
+
+describe('hasStarted', () => {
+  it('is false in the lobby and before the start moment', () => {
+    expect(hasStarted(session({ started_at: null }), T0)).toBe(false)
+    expect(hasStarted(session(), T0 - 1)).toBe(false)
+    expect(hasStarted(session(), T0)).toBe(true)
+  })
+})
+
 describe('isOpen', () => {
   it('closes on its own once closes_at passes; without it only by hand', () => {
     const closes_at = new Date(T0).toISOString()
@@ -172,6 +194,18 @@ describe('buildView', () => {
     expect(v.questions[0].options).toEqual(['C', 'A', 'B', 'D'])
     expect(v.answers).toEqual({ q1: 0 })
     expect(v.question_deadline_at).toBeNull()
+  })
+
+  it('shows no questions while waiting, with the start time once it is set', () => {
+    const lobby = buildView(attempt(), session({ started_at: null }), questions, new Date(T0))
+    expect(lobby.status).toBe('waiting')
+    expect(lobby.questions).toEqual([])
+    expect(lobby.starts_at).toBeNull()
+    const soon = buildView(attempt(), session({ started_at: iso(T0 + 10_000) }), questions, new Date(T0))
+    expect(soon.status).toBe('waiting')
+    expect(soon.questions).toEqual([])
+    expect(soon.starts_at).toBe(T0 + 10_000)
+    expect(buildView(attempt(), session(), questions, new Date(T0)).status).toBe('active')
   })
 
   it('exposes no questions once submitted, and the score only when released', () => {

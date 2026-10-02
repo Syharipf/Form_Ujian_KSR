@@ -3,7 +3,8 @@
 //
 // Real deployment: create a test session with questions, open it, then
 //   BASE=https://ujiksr.vercel.app CODE=ABC123 N=150 bun e2e/load.ts
-// and delete that session afterwards, which removes the fake participants.
+// press "Mulai ujian" in /admin once everyone has joined, and delete that session afterwards, which
+// removes the fake participants.
 // Without CODE it runs against the local `bun run e2e` stack and sets the session up itself.
 import { chromium } from 'playwright-core'
 
@@ -50,23 +51,37 @@ async function localSession() {
   await page.click('text=Upload & ganti semua soal')
   await page.getByText('soal tersimpan').waitFor()
   await page.click('text=Buka sesi')
-  await page.getByText('Sesi dibuka —').waitFor()
+  await page.getByText('Lobi dibuka —').waitFor()
+  const start = async () => {
+    await page.reload()
+    page.once('dialog', (dlg) => dlg.accept())
+    await page.getByRole('button', { name: 'Mulai ujian', exact: true }).click()
+    await page.getByText('Soal muncul di HP peserta dalam').waitFor()
+  }
   const close = async () => {
     await page.click('text=Tutup sesi')
     await page.getByText('Sesi ditutup —').waitFor()
     await browser.close()
   }
-  return { code, close }
+  return { code, start, close }
 }
 
 const local = process.env.CODE ? null : await localSession()
 const code = process.env.CODE ?? local!.code
 console.log(`${N} participants → ${BASE} session ${code}\n`)
 
-const joins = await Promise.all(Array.from({ length: N }, (_, i) => api('/api/attempts', { code, name: `Beban ${i + 1}`, nim: `LOAD-${RUN}-${i + 1}` })))
+const joins = await Promise.all(Array.from({ length: N }, (_, i) => api('/api/attempts', { code, name: `Beban ${i + 1}`, nim: `LOAD-${RUN}-${i + 1}`, prodi: 'Uji beban' })))
 report('join', joins)
 const ids = joins.filter((r) => r.ok).map((r) => r.data.id)
 
+// Everyone waits in the lobby until the committee starts the exam, then opens it at the same moment.
+if (local) await local.start()
+else console.log('Press "Mulai ujian" in /admin.')
+while (true) {
+  const { data } = await api(`/api/attempts/${ids[0]}`)
+  if (data.status !== 'waiting') break
+  await new Promise((r) => setTimeout(r, 1000))
+}
 const opens = await Promise.all(ids.map((id) => api(`/api/attempts/${id}`)))
 report('open exam', opens)
 

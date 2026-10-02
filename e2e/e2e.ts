@@ -49,13 +49,23 @@ async function createSession(page: Page, title: string, kind: 'pre' | 'post', mo
   await page.click('text=Upload & ganti semua soal')
   await page.getByText('4 soal tersimpan').waitFor()
   await page.click('text=Buka sesi')
-  await page.getByText('Sesi dibuka —').waitFor()
+  await page.getByText('Lobi dibuka —').waitFor()
   assert.ok(await page.locator('img[alt^="QR http"]').isVisible())
-  log(`session ${title} (${mode}, other mode's time field disabled) created, 4 questions uploaded, opened, QR shown → ${code}`)
+  log(`session ${title} (${mode}, other mode's time field disabled) created, 4 questions uploaded, lobby opened, QR shown → ${code}`)
   return { code, url: page.url().split('?')[0] }
 }
 
-async function participant(browser: Browser, code: string, name: string, nim: string) {
+// "Mulai ujian" on the session page: everyone's questions appear START_DELAY_MS later.
+async function startExam(page: Page, url: string) {
+  await page.goto(url)
+  page.once('dialog', (dlg) => dlg.accept())
+  await page.getByRole('button', { name: 'Mulai ujian', exact: true }).click()
+  await page.getByText('Soal muncul di HP peserta dalam').waitFor()
+}
+const STARTED = { timeout: 20_000 } // START_DELAY_MS + a lobby poll
+
+// Joins; resolves once the exam page is showing (questions, or the lobby when `active` is false).
+async function participant(browser: Browser, code: string, name: string, nim: string, active = true) {
   const ctx = await browser.newContext({ ...devices['Pixel 7'] })
   const page = await ctx.newPage()
   const views: string[] = []
@@ -65,9 +75,10 @@ async function participant(browser: Browser, code: string, name: string, nim: st
   await page.goto(`${BASE}/s/${code}`)
   await page.fill('input[name=name]', name)
   await page.fill('input[name=nim]', nim)
-  await page.click('text=Mulai ujian')
+  await page.fill('input[name=prodi]', 'S1 TI')
+  await page.click('text=Masuk ujian')
   await page.waitForURL(/\/exam\//)
-  await page.getByText(/Pelanggaran 0\//).waitFor()
+  await (active ? page.getByText(/Pelanggaran 0\//) : page.getByText('Tunggu panitia memulai ujian')).waitFor()
   return { page, views }
 }
 
@@ -91,9 +102,18 @@ try {
   await display.close()
   log('QR display page shows the code and QR without the answer key')
 
-  const a = await participant(browser, pre.code, 'Ani', '1001')
+  // --- lobby -------------------------------------------------------------
+  const a = await participant(browser, pre.code, 'Ani', '1001', false)
   assert.equal(await a.page.evaluate(() => document.fullscreenElement !== null), true)
-  log('participant enters fullscreen on start')
+  const attemptA = a.page.url().split('/exam/')[1]
+  const early = await a.page.request.post(`${BASE}/api/attempts/${attemptA}/submit`, { data: {} })
+  assert.equal(early.status(), 409)
+  assert.ok(a.views.length > 0 && a.views.every((v) => v.includes('"status":"waiting"') && v.includes('"questions":[]')))
+  log('participant enters fullscreen on joining and waits in the lobby; no questions sent, submitting is refused')
+  await startExam(adminPage, pre.url)
+  await a.page.getByText('Ujian dimulai dalam').waitFor()
+  await a.page.getByText(/Pelanggaran 0\//).waitFor(STARTED)
+  log('"Mulai ujian" shows a countdown on the waiting phone, then the questions appear without a reload')
   const questions = a.page.locator('main section')
   assert.equal(await questions.count(), 4)
   // Scope each pick to its question: "Benar"/"Salah" appear in both true/false questions.
@@ -113,11 +133,14 @@ try {
   await a.page.goto(`${BASE}/s/${pre.code}`)
   await a.page.getByText('Lihat nilai ujianmu').waitFor()
   await a.page.getByText('Ujian ini sudah dikerjakan dari HP ini').waitFor()
-  assert.equal(await a.page.getByRole('button', { name: 'Mulai ujian' }).count(), 0)
+  assert.equal(await a.page.getByRole('button', { name: 'Masuk ujian' }).count(), 0)
   log('a phone that finished the session can open its score but not start another attempt')
 
   // violations → auto-submit
   const b = await participant(browser, pre.code, '=HYPERLINK("http://x")', '1002')
+  const deadline = (views: string[]) => JSON.parse(views.findLast((v) => v.includes('deadline_at'))!).deadline_at
+  assert.equal(deadline(b.views), deadline(a.views))
+  log('a latecomer gets the same end time as everyone (only the time left)')
   await pick(b.page, 'Korps Sukarela')
   for (let i = 1; i <= 2; i++) {
     await b.page.evaluate(() => window.dispatchEvent(new Event('blur')))
@@ -174,7 +197,8 @@ try {
   assert.equal(await inApp.locator('.old-browser-note').isVisible(), false)
   await inApp.fill('input[name=name]', 'Eka')
   await inApp.fill('input[name=nim]', '1006')
-  await inApp.click('text=Mulai ujian')
+  await inApp.fill('input[name=prodi]', 'S1 TI')
+  await inApp.click('text=Masuk ujian')
   await inApp.getByText(/Pelanggaran 0\//).waitFor()
   assert.equal(await inApp.getByText('Layar ujian terkunci').count(), 0)
   await inApp.click('text=Kumpulkan jawaban')
@@ -185,16 +209,16 @@ try {
   // --- admin results ------------------------------------------------------
   await adminPage.goto(pre.url)
   const row = (name: string) => adminPage.locator('tbody tr', { hasText: name })
-  assert.match(await row('Ani').innerText(), /1001\s+100\s+0\s+Selesai/)
-  assert.match(await row('HYPERLINK').innerText(), /1002\s+25\s+3\s+Auto-submit \(pelanggaran\)/)
+  assert.match(await row('Ani').innerText(), /1001\s+S1 TI\s+100\s+0\s+Selesai/)
+  assert.match(await row('HYPERLINK').innerText(), /1002\s+S1 TI\s+25\s+3\s+Auto-submit \(pelanggaran\)/)
   await row('HYPERLINK').locator('summary').click()
   assert.match(await row('HYPERLINK').innerText(), /hilang fokus/)
   assert.match(await row('Cici').innerText(), /Mengerjakan/)
   log('admin results show score, violation count/log and status')
 
   const csv = await (await adminPage.request.get(`${pre.url}/export`)).text()
-  assert.match(csv, /Ani,1001,100,0,selesai/)
-  assert.match(csv, /"'=HYPERLINK\(""http:\/\/x""\)",1002,25,3/)
+  assert.match(csv, /Ani,1001,S1 TI,100,0,selesai/)
+  assert.match(csv, /"'=HYPERLINK\(""http:\/\/x""\)",1002,S1 TI,25,3/)
   const anon = await (await browser.newContext()).request.get(`${pre.url}/export`)
   assert.equal(anon.status(), 401)
   log('CSV export works, escapes formula names, requires admin')
@@ -215,8 +239,9 @@ try {
 
   // --- per-question mode ----------------------------------------------------
   const post = await createSession(adminPage, 'Post-test E2E', 'post', 'per_question', 5)
-  const p = await participant(browser, post.code, 'Ani', '1001')
-  await p.page.getByText('Soal 1 dari 4').waitFor()
+  const p = await participant(browser, post.code, 'Ani', '1001', false)
+  await startExam(adminPage, post.url)
+  await p.page.getByText('Soal 1 dari 4').waitFor(STARTED)
   assert.ok(await p.page.getByText('Jawab & lanjut').isDisabled())
   const firstText = await p.page.locator('main p.font-medium').innerText()
   await pick(p.page, answerFor(firstText))
@@ -236,7 +261,7 @@ try {
   log('per-question: last answer finishes the exam; score is withheld while the session is open, with a countdown')
 
   await adminPage.goto(post.url)
-  assert.match(await row('Ani').innerText(), /1001\s+75\s+0\s+Selesai/)
+  assert.match(await row('Ani').innerText(), /1001\s+S1 TI\s+75\s+0\s+Selesai/)
   log('per-question score 75 (skipped question counted wrong)')
 
   // --- compare --------------------------------------------------------------
@@ -247,10 +272,10 @@ try {
   log('compare page joins pre/post by NIM with delta')
 
   // --- automatic close ---------------------------------------------------------------
-  // Opening started a 4 × 5 s clock: the session closes by itself and, with nobody working,
+  // Starting began a 4 × 5 s clock: the session closes by itself and, with nobody working,
   // the waiting participant's score appears without a reload.
   await adminPage.goto(post.url)
-  await adminPage.getByText('Tutup otomatis dalam').waitFor()
+  await adminPage.getByText('Ujian berakhir dalam').waitFor()
   await adminPage.getByText('Sesi ditutup otomatis').waitFor({ timeout: 30_000 }) // auto-refresh, no reload
   await p.page.getByText('Nilaimu').waitFor({ timeout: 35_000 })
   const shut = await (await browser.newContext()).newPage()
@@ -258,12 +283,15 @@ try {
   await shut.getByText('Sesi ini belum dibuka atau sudah ditutup.').waitFor()
   log('session closes on its own after its duration; the score then appears without a reload')
   await adminPage.getByRole('button', { name: 'Buka sesi', exact: true }).click()
-  await adminPage.getByText('Sesi dibuka —').waitFor()
+  await adminPage.getByText('Lobi dibuka —').waitFor()
+  log('reopening a session whose exam is over opens a fresh lobby')
 
   // --- closed session and score release -------------------------------------------
   // Budi is still working (per-question, 4 × 5 s) when the session closes and never answers, so
   // scores stay hidden until his time runs out; then everyone's score appears together.
-  const late = await participant(browser, post.code, 'Budi', '1004')
+  const late = await participant(browser, post.code, 'Budi', '1004', false)
+  await startExam(adminPage, post.url)
+  await late.page.getByText('Soal 1 dari 4').waitFor(STARTED)
   await adminPage.goto(post.url)
   await adminPage.getByRole('button', { name: 'Tutup sesi', exact: true }).click()
   await adminPage.getByText('Sesi ditutup —').waitFor()
@@ -299,7 +327,7 @@ try {
   await closed.goto(`${BASE}/s/${post.code}`)
   await closed.getByText('Sesi ini belum dibuka atau sudah ditutup.').waitFor()
   assert.equal(await closed.getByText('Lihat nilai ujianmu').count(), 0)
-  const api = await closed.request.post(`${BASE}/api/attempts`, { data: { code: post.code, name: 'X', nim: '9' } })
+  const api = await closed.request.post(`${BASE}/api/attempts`, { data: { code: post.code, name: 'X', nim: '9', prodi: 'S1 TI' } })
   assert.equal(api.status(), 403)
   log('closed session refuses new participants (page and API)')
 
@@ -398,7 +426,8 @@ try {
   await joiner.goto(`${BASE}/s/${pre.code}`)
   await joiner.fill('input[name=name]', 'Dodi')
   await joiner.fill('input[name=nim]', '1005')
-  await joiner.click('text=Mulai ujian')
+  await joiner.fill('input[name=prodi]', 'S1 TI')
+  await joiner.click('text=Masuk ujian')
   await spinner(joiner).waitFor({ state: 'visible' })
   assert.ok(await joiner.locator('button[aria-busy="true"]').isDisabled())
   await joiner.waitForURL(/\/exam\//)

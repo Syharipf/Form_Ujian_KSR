@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import Notice from '@/app/notice'
 import { PendingLabel } from '@/app/pending'
 import ThemeToggle from '@/app/theme-toggle'
-import { clock, GRACE_MS, type ExamView, type PublicQuestion } from '@/lib/exam'
+import { clock, GRACE_MS, LOBBY_POLL_MS, type ExamView, type PublicQuestion } from '@/lib/exam'
 import { enterFullscreen, exitFullscreen, isFullscreen, subscribeFullscreen } from '@/lib/fullscreen'
 import Confetti from './confetti'
 import { useAntiCheat } from './use-anti-cheat'
@@ -61,6 +61,21 @@ function useResultChecks(view: ExamView | null, offset: number, refresh: () => P
     const t = setTimeout(() => refresh().finally(() => setChecks((n) => n + 1)), delay)
     return () => clearTimeout(t)
   }, [waiting, resultsAt, offset, refresh, checks])
+}
+
+// Lobby: check every LOBBY_POLL_MS (spread out a little so a full room doesn't ask at once) until the
+// start time is known, then wake exactly at it so everyone's questions appear together. Re-armed after
+// every check, even a failed one.
+function useStartChecks(view: ExamView | null, offset: number, refresh: () => Promise<unknown>) {
+  const [checks, setChecks] = useState(0)
+  const waiting = view?.status === 'waiting'
+  const startsAt = view?.starts_at ?? null
+  useEffect(() => {
+    if (!waiting) return
+    const delay = startsAt === null ? LOBBY_POLL_MS + Math.random() * 1000 : Math.max(0, startsAt - (Date.now() + offset))
+    const t = setTimeout(() => refresh().finally(() => setChecks((n) => n + 1)), delay)
+    return () => clearTimeout(t)
+  }, [waiting, startsAt, offset, refresh, checks])
 }
 
 export default function ExamClient({ id }: { id: string }) {
@@ -132,7 +147,7 @@ export default function ExamClient({ id }: { id: string }) {
   }, [id, base, apply, onError, reportViolation])
 
   const active = view?.status === 'active'
-  useAntiCheat(active, reportViolation)
+  useAntiCheat(active, reportViolation, active || view?.status === 'waiting')
 
   const deadline = view ? (view.question_deadline_at ?? view.deadline_at) : 0
 
@@ -151,10 +166,12 @@ export default function ExamClient({ id }: { id: string }) {
   }, [view, id])
 
   useResultChecks(view, offset, refresh)
+  useStartChecks(view, offset, refresh)
 
   if (fatal) return <Notice title="Tidak bisa membuka ujian" body={fatal.message} />
   if (!view) return <Notice title="Memuat ujian…" />
   if (view.status === 'submitted') return <Submitted view={view} offset={offset} />
+  if (view.status === 'waiting') return <Waiting view={view} offset={offset} />
 
   // Answers and submit run one at a time so each response includes every earlier answer,
   // and a quick "Kumpulkan" never overtakes the last pick. Only the final response is applied,
@@ -335,6 +352,24 @@ function ReleaseCountdown({ at, offset }: Readonly<{ at: number; offset: number 
       </p>
       <p className="text-sm text-muted">{left ? 'Menunggu peserta lain menyelesaikan ujian. Biarkan halaman ini terbuka.' : 'Mengambil nilai…'}</p>
     </>
+  )
+}
+
+function Waiting({ view, offset }: Readonly<{ view: ExamView; offset: number }>) {
+  const left = Math.max(0, (view.starts_at ?? 0) - (useNow() + offset))
+  return (
+    <Notice title={view.title} body={`${view.name} · ${view.nim}`}>
+      {view.starts_at === null ? (
+        <p className="mt-2 text-secondary">Kamu sudah masuk. Tunggu panitia memulai ujian — soal muncul otomatis di sini. Biarkan halaman ini terbuka.</p>
+      ) : (
+        <>
+          <p className="mt-2 text-secondary">Ujian dimulai dalam</p>
+          <p role="timer" className="font-mono text-5xl font-bold tabular-nums text-primary">
+            {clock(left)}
+          </p>
+        </>
+      )}
+    </Notice>
   )
 }
 

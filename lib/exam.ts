@@ -15,12 +15,21 @@ export interface Session {
   per_question_sec: number
   max_violations: number
   is_open: boolean
-  closes_at: string | null // set when opened: the exam's own duration later, it takes no new participants
+  closes_at: string | null // set by "Mulai ujian": the exam's end, it takes no new participants after it (null = until closed by hand)
+  started_at: string | null // set by "Mulai ujian": everyone's clock starts here (null = lobby, participants wait)
 }
 
-// Open = opened by the committee and its duration since opening not yet over.
+// Open = opened by the committee and the exam not yet over.
 export const isOpen = (s: Pick<Session, 'is_open' | 'closes_at'>, now = Date.now()) =>
   s.is_open && (s.closes_at === null || now < Date.parse(s.closes_at))
+
+// Started = the committee pressed "Mulai ujian" and that moment has come. Before it, participants wait in the lobby.
+export const hasStarted = (s: Pick<Session, 'started_at'>, now = Date.now()) => s.started_at !== null && now >= Date.parse(s.started_at)
+
+// Waiting phones check for the start this often; "Mulai ujian" starts the clock a little later than
+// that, so every phone knows the start time before it comes and shows the questions at the same moment.
+export const LOBBY_POLL_MS = 5000
+export const START_DELAY_MS = 2 * LOBBY_POLL_MS + 1000
 
 // '2026-09-27' → '27 Sep 2026'. A bare date parses as UTC midnight, so format in UTC.
 export const formatDate = (ymd: string) => new Date(ymd).toLocaleDateString('id-ID', { dateStyle: 'medium', timeZone: 'UTC' })
@@ -46,6 +55,7 @@ export interface Attempt {
   session_id: string
   name: string
   nim: string
+  prodi: string
   question_order: string[]
   option_orders: Record<string, number[]> // question id → original option indices in display order
   answers: Record<string, number> // question id → original option index
@@ -67,7 +77,7 @@ export interface PublicQuestion {
 }
 
 export interface ExamView {
-  status: 'active' | 'submitted'
+  status: 'waiting' | 'active' | 'submitted'
   submit_reason: SubmitReason | null
   title: string
   name: string
@@ -76,6 +86,7 @@ export interface ExamView {
   max_violations: number
   violation_count: number
   server_now: number
+  starts_at: number | null // waiting: when the questions appear (null = the committee hasn't pressed "Mulai ujian" yet)
   deadline_at: number
   question_deadline_at: number | null
   current_index: number
@@ -127,6 +138,12 @@ export function deadlineFor(s: Pick<Session, 'timer_mode' | 'duration_sec' | 'pe
   return new Date(start.getTime() + sec * 1000)
 }
 
+// An attempt's clock fields when it starts at `start`: the session's start, so latecomers get only the time left.
+export function timing(s: Pick<Session, 'timer_mode' | 'duration_sec' | 'per_question_sec'>, count: number, start: Date) {
+  const at = start.toISOString()
+  return { started_at: at, question_started_at: at, deadline_at: deadlineFor(s, count, start).toISOString() }
+}
+
 // Where the attempt should be at `now`: expired per-question slots are skipped (left blank).
 export function settle(a: Attempt, s: Session, now: Date) {
   const t = now.getTime() - GRACE_MS
@@ -170,14 +187,15 @@ export function planAnswer(a: Attempt, s: Session, questionId: string) {
 // `results`: whether this participant may see their own score yet (session over), and when that happens.
 export function buildView(a: Attempt, s: Session, questions: Record<string, Question>, now: Date, results = NOT_RELEASED): ExamView {
   const submitted = a.submitted_at !== null
+  const waiting = !submitted && !hasStarted(s, now.getTime())
   const perQuestion = s.timer_mode === 'per_question'
-  const ids = submitted ? [] : perQuestion ? a.question_order.slice(a.current_index, a.current_index + 1) : a.question_order
+  const ids = submitted || waiting ? [] : perQuestion ? a.question_order.slice(a.current_index, a.current_index + 1) : a.question_order
   const answers: Record<string, number> = {}
   if (!perQuestion) {
     for (const [id, original] of Object.entries(a.answers)) answers[id] = a.option_orders[id].indexOf(original)
   }
   return {
-    status: submitted ? 'submitted' : 'active',
+    status: submitted ? 'submitted' : waiting ? 'waiting' : 'active',
     submit_reason: a.submit_reason,
     title: s.title,
     name: a.name,
@@ -186,6 +204,7 @@ export function buildView(a: Attempt, s: Session, questions: Record<string, Ques
     max_violations: s.max_violations,
     violation_count: a.violation_count,
     server_now: now.getTime(),
+    starts_at: s.started_at ? Date.parse(s.started_at) : null,
     deadline_at: Date.parse(a.deadline_at),
     question_deadline_at: perQuestion ? Date.parse(a.question_started_at) + s.per_question_sec * 1000 : null,
     current_index: a.current_index,

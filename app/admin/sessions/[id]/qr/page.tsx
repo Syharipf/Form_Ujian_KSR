@@ -5,8 +5,8 @@ import Brand from '@/app/brand'
 import { requireAdmin } from '@/lib/admin-auth'
 import { UUID } from '@/lib/attempts'
 import { db, must } from '@/lib/db'
-import { formatDate, isOpen, type Session } from '@/lib/exam'
-import { AutoRefresh, FullscreenButton } from '../live'
+import { formatDate, hasStarted, isOpen, type Session } from '@/lib/exam'
+import { AutoRefresh, Countdown, FullscreenButton } from '../live'
 
 // Share-screen / projector view: only what participants need to join. The session page itself must
 // not be shared, since its question list shows the answer key.
@@ -14,10 +14,14 @@ export default async function QrDisplayPage(props: PageProps<'/admin/sessions/[i
   await requireAdmin()
   const { id } = await props.params
   if (!UUID.test(id)) notFound()
-  const session: Pick<Session, 'title' | 'code' | 'kind' | 'held_on' | 'is_open' | 'closes_at'> | null = must(
-    await db().from('exam_sessions').select('title, code, kind, held_on, is_open, closes_at').eq('id', id).maybeSingle(),
+  const session: (Pick<Session, 'title' | 'code' | 'kind' | 'held_on' | 'is_open' | 'closes_at' | 'started_at'> & { attempts: { count: number }[] }) | null = must(
+    await db().from('exam_sessions').select('title, code, kind, held_on, is_open, closes_at, started_at, attempts(count)').eq('id', id).maybeSingle(),
   )
   if (!session) notFound()
+  // eslint-disable-next-line react-hooks/purity -- server component, rendered once per request
+  const serverNow = Date.now()
+  const open = isOpen(session, serverNow)
+  const joined = session.attempts[0]?.count ?? 0
 
   const h = await headers()
   const host = h.get('host') ?? ''
@@ -50,9 +54,20 @@ export default async function QrDisplayPage(props: PageProps<'/admin/sessions/[i
             </p>
             <p className="font-mono text-6xl font-extrabold tracking-[0.15em] text-primary lg:text-8xl">{session.code}</p>
           </div>
-          <p className={`badge text-base ${isOpen(session) ? 'bg-ok-soft text-ok' : 'bg-subtle text-muted'}`}>
-            {isOpen(session) ? 'Sesi dibuka — silakan mulai' : session.is_open ? 'Sesi sudah ditutup' : 'Sesi belum dibuka'}
+          <p className={`badge text-base ${open ? 'bg-ok-soft text-ok' : 'bg-subtle text-muted'}`}>
+            {!open
+              ? session.is_open || session.started_at ? 'Sesi sudah ditutup' : 'Sesi belum dibuka'
+              : !session.started_at
+                ? `Silakan masuk — ${joined} peserta menunggu, ujian dimulai serentak`
+                : !hasStarted(session, serverNow)
+                  ? 'Ujian segera dimulai'
+                  : 'Ujian berjalan — yang telat dapat sisa waktu'}
           </p>
+          {open && session.closes_at && hasStarted(session, serverNow) && (
+            <p className="text-lg text-secondary lg:text-2xl">
+              Sisa waktu <Countdown until={Date.parse(session.closes_at)} serverNow={serverNow} />
+            </p>
+          )}
         </div>
       </div>
     </main>

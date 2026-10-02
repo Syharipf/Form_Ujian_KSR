@@ -1,6 +1,6 @@
 import { handle, readJson } from '@/lib/api'
 import { db, must } from '@/lib/db'
-import { buildOrder, deadlineFor, ExamError, isOpen, type Question, type Session } from '@/lib/exam'
+import { buildOrder, ExamError, isOpen, timing, type Question, type Session } from '@/lib/exam'
 
 export async function POST(req: Request) {
   return handle(async () => {
@@ -8,8 +8,10 @@ export async function POST(req: Request) {
     const code = String(body.code ?? '').trim().toUpperCase()
     const name = String(body.name ?? '').trim()
     const nim = String(body.nim ?? '').trim()
+    const prodi = String(body.prodi ?? '').trim()
     if (!name || name.length > 100) throw new ExamError(400, 'Nama wajib diisi (maks. 100 karakter)')
     if (!nim || nim.length > 30) throw new ExamError(400, 'NIM wajib diisi (maks. 30 karakter)')
+    if (!prodi || prodi.length > 100) throw new ExamError(400, 'Prodi wajib diisi (maks. 100 karakter)')
 
     const session: (Session & { questions: Question[] }) | null = must(
       await db().from('exam_sessions').select('*, questions(*)').eq('code', code).maybeSingle(),
@@ -18,17 +20,18 @@ export async function POST(req: Request) {
     const { questions } = session
     if (!questions.length) throw new ExamError(400, 'Soal belum tersedia. Hubungi panitia.')
 
-    const now = new Date()
+    // Latecomers start from the session's start, so they get only the time left. In the lobby the clock
+    // is a placeholder from now, re-timed by "Mulai ujian".
+    const start = session.started_at ? new Date(session.started_at) : new Date()
     const { data, error } = await db()
       .from('attempts')
       .insert({
         session_id: session.id,
         name,
         nim,
+        prodi,
         ...buildOrder(questions),
-        started_at: now.toISOString(),
-        question_started_at: now.toISOString(),
-        deadline_at: deadlineFor(session, questions.length, now).toISOString(),
+        ...timing(session, questions.length, start),
       })
       .select('id')
       .single()

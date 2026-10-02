@@ -6,8 +6,9 @@ import { redirect } from 'next/navigation'
 import { requireAdmin } from '@/lib/admin-auth'
 import { COOKIE, makeToken, passwordMatches, TTL_MS } from '@/lib/admin-token'
 import { parseQuestionsCsv, toQuestion } from '@/lib/csv'
+import { finalizeExpired } from '@/lib/attempts'
 import { db, must } from '@/lib/db'
-import { deadlineFor, type Session } from '@/lib/exam'
+import { deadlineFor, isOpen, START_DELAY_MS, timing, type Session } from '@/lib/exam'
 
 const back = (id: string, msg: string) => redirect(`/admin/sessions/${id}?msg=${encodeURIComponent(msg)}`)
 
@@ -79,18 +80,43 @@ export async function updateSession(id: string, formData: FormData) {
   back(id, 'Pengaturan tersimpan')
 }
 
-// Opening starts the clock: the session takes participants for as long as the exam itself lasts.
+type TimerRow = Pick<Session, TimerField | 'is_open' | 'closes_at' | 'started_at'> & { questions: { count: number }[] }
+const timerRow = async (id: string): Promise<TimerRow> =>
+  must(await db().from('exam_sessions').select('is_open, closes_at, started_at, timer_mode, duration_sec, per_question_sec, questions(count)').eq('id', id).single())
+
+// Opening a new session (or one whose exam is over) opens the lobby: participants join and wait for
+// "Mulai ujian". Reopening an exam still running lets latecomers in for the time left.
 export async function setOpen(id: string, open: boolean) {
   await requireAdmin()
-  let closes_at = null
+  const fields: Partial<Session> = { is_open: open, closes_at: null }
   if (open) {
-    const s: Pick<Session, TimerField> & { questions: { count: number }[] } = must(
-      await db().from('exam_sessions').select('timer_mode, duration_sec, per_question_sec, questions(count)').eq('id', id).single(),
-    )
-    closes_at = deadlineFor(s, s.questions[0]?.count ?? 0, new Date()).toISOString()
+    const s = await timerRow(id)
+    const end = s.started_at && deadlineFor(s, s.questions[0]?.count ?? 0, new Date(s.started_at))
+    if (end && end.getTime() > Date.now()) fields.closes_at = end.toISOString()
+    else if (s.started_at) {
+      await finalizeExpired(id) // the last round's leftovers time out on its clock, before it is cleared
+      fields.started_at = null
+    }
   }
-  must(await db().from('exam_sessions').update({ is_open: open, closes_at }).eq('id', id))
+  must(await db().from('exam_sessions').update(fields).eq('id', id))
   back(id, open ? 'Sesi dibuka' : 'Sesi ditutup')
+}
+
+// Starts every participant's clock at the same moment, START_DELAY_MS from now (see lib/exam.ts).
+export async function startExam(id: string) {
+  await requireAdmin()
+  const s = await timerRow(id)
+  const count = s.questions[0]?.count ?? 0
+  if (!isOpen(s) || s.started_at) return back(id, 'Ujian hanya bisa dimulai saat sesi dibuka dan belum dimulai')
+  if (!count) return back(id, 'Belum ada soal')
+  const clock = timing(s, count, new Date(Date.now() + START_DELAY_MS))
+  const started = must(
+    await db().from('exam_sessions').update({ started_at: clock.started_at, closes_at: clock.deadline_at }).eq('id', id).is('started_at', null).select('id'),
+  )
+  if (!started.length) return back(id, 'Ujian sudah dimulai')
+  // Lobby attempts carry placeholder clocks from their join; a join landing after this is re-timed by sync().
+  must(await db().from('attempts').update(clock).eq('session_id', id).is('submitted_at', null).lt('started_at', clock.started_at))
+  back(id, 'Ujian dimulai')
 }
 
 // Questions, attempts and violations go with it (on delete cascade).
@@ -168,5 +194,6 @@ export async function resetAttempt(sessionId: string, attemptId: string) {
 export async function resetAllAttempts(sessionId: string) {
   await requireAdmin()
   must(await db().from('attempts').delete().eq('session_id', sessionId))
+  must(await db().from('exam_sessions').update({ started_at: null, closes_at: null }).eq('id', sessionId)) // a fresh lobby
   back(sessionId, 'Semua peserta direset')
 }

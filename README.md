@@ -42,7 +42,7 @@
 ## Fitur
 
 **Untuk peserta**
-- Tanpa akun: scan QR, isi nama dan NIM, langsung mulai.
+- Tanpa akun: scan QR, isi nama, NIM, dan prodi, lalu tunggu di lobi sampai panitia menekan Mulai — semua peserta mulai serentak.
 - Dua mode timer: **total** (bebas bolak-balik antar soal) atau **per soal** (tidak bisa kembali ke soal sebelumnya).
 - Soal dan urutan opsi diacak untuk tiap peserta.
 - Timer dan penilaian dihitung server, jadi tidak bisa diakali dari HP.
@@ -173,7 +173,7 @@ E2E butuh Chromium. Set `CHROMIUM_PATH` kalau lokasinya bukan `/usr/bin/chromium
 ```
 app/
   page.tsx               beranda: masukkan kode sesi
-  s/[code]/              halaman join (aturan ujian, nama + NIM)
+  s/[code]/              halaman join (aturan ujian, nama + NIM + prodi)
   exam/[id]/             halaman ujian + anti-cheat (use-anti-cheat.ts)
   api/attempts/          API peserta: mulai, lihat, jawab, submit, pelanggaran
   admin/                 panel panitia (server actions di actions.ts)
