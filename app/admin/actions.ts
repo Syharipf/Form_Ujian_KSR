@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { requireAdmin } from '@/lib/admin-auth'
 import { COOKIE, makeToken, passwordMatches, TTL_MS } from '@/lib/admin-token'
 import { parseQuestionsCsv, toQuestion } from '@/lib/csv'
-import { finalizeExpired } from '@/lib/attempts'
+import { finishRound } from '@/lib/attempts'
 import { db, must } from '@/lib/db'
 import { deadlineFor, isOpen, START_DELAY_MS, timing, type Session } from '@/lib/exam'
 
@@ -94,11 +94,15 @@ export async function setOpen(id: string, open: boolean) {
     const end = s.started_at && deadlineFor(s, s.questions[0]?.count ?? 0, new Date(s.started_at))
     if (end && end.getTime() > Date.now()) fields.closes_at = end.toISOString()
     else if (s.started_at) {
-      await finalizeExpired(id) // the last round's leftovers time out on its clock, before it is cleared
+      await finishRound(id, s.started_at) // finish the last round's leftovers before clearing its clock
       fields.started_at = null
     }
+    const update = db().from('exam_sessions').update(fields).eq('id', id)
+    const opened = must(await (s.started_at === null ? update.is('started_at', null) : update.eq('started_at', s.started_at)).select('id'))
+    if (!opened.length) return back(id, 'Status sesi berubah — muat ulang halaman lalu coba lagi')
+  } else {
+    must(await db().from('exam_sessions').update(fields).eq('id', id))
   }
-  must(await db().from('exam_sessions').update(fields).eq('id', id))
   back(id, open ? 'Sesi dibuka' : 'Sesi ditutup')
 }
 

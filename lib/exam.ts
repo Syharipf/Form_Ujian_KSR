@@ -155,7 +155,7 @@ export function settle(a: Attempt, s: Session, now: Date) {
   const started = Date.parse(a.question_started_at)
   const skips = Math.max(0, Math.floor((t - started) / per))
   const current_index = a.current_index + skips
-  const finish: SubmitReason | null = current_index >= a.question_order.length ? 'timeout' : null
+  const finish: SubmitReason | null = current_index >= a.question_order.length || t >= Date.parse(a.deadline_at) ? 'timeout' : null
   return { current_index, question_started_at: new Date(started + skips * per).toISOString(), finish }
 }
 
@@ -206,7 +206,7 @@ export function buildView(a: Attempt, s: Session, questions: Record<string, Ques
     server_now: now.getTime(),
     starts_at: s.started_at ? Date.parse(s.started_at) : null,
     deadline_at: Date.parse(a.deadline_at),
-    question_deadline_at: perQuestion ? Date.parse(a.question_started_at) + s.per_question_sec * 1000 : null,
+    question_deadline_at: perQuestion ? Math.min(Date.parse(a.question_started_at) + s.per_question_sec * 1000, Date.parse(a.deadline_at)) : null,
     current_index: a.current_index,
     total: a.question_order.length,
     questions: ids.map((id) => {
