@@ -224,7 +224,7 @@ try {
   log('CSV export works, escapes formula names, requires admin')
 
   // question editing is locked while participants exist; reset one participant
-  await adminPage.getByText('Soal terkunci karena sudah ada peserta').waitFor()
+  await adminPage.getByText(/^Soal terkunci karena sudah ada peserta atau ujian sudah dimulai/).waitFor()
   assert.equal(await adminPage.locator('input[type=file], summary:has-text("Tambah soal")').count(), 0)
   adminPage.once('dialog', (dlg) => dlg.accept())
   await row('Cici').getByText('Reset').click()
@@ -234,7 +234,7 @@ try {
 
   await adminPage.fill('input[name=duration_min]', '20')
   await adminPage.getByRole('button', { name: 'Simpan pengaturan', exact: true }).click()
-  await adminPage.getByText('timer terkunci karena sudah ada peserta').waitFor()
+  await adminPage.getByText('timer terkunci karena sudah ada peserta atau ujian sudah dimulai').waitFor()
   log('timer settings are locked while attempts exist')
 
   // --- per-question mode ----------------------------------------------------

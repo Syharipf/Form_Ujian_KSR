@@ -70,9 +70,9 @@ export async function createSession(formData: FormData) {
 export async function updateSession(id: string, formData: FormData) {
   await requireAdmin()
   const fields = sessionFields(formData)
-  // Running attempts were timed with the current settings (deadlines, per-question order);
+  // The shared clock and attempts use the current settings (deadlines, per-question order);
   // changing them underneath would move deadlines or let per-question takers go back.
-  if (await hasAttempts(id)) {
+  if (await isLocked(id)) {
     const current: Pick<Session, TimerField> = must(await db().from('exam_sessions').select(TIMER_FIELDS.join(',')).eq('id', id).single())
     if (TIMER_FIELDS.some((key) => key in fields && fields[key] !== current[key])) return back(id, TIMER_LOCKED)
   }
@@ -94,7 +94,7 @@ export async function setOpen(id: string, open: boolean) {
     const end = s.started_at && deadlineFor(s, s.questions[0]?.count ?? 0, new Date(s.started_at))
     if (end && end.getTime() > Date.now()) fields.closes_at = end.toISOString()
     else if (s.started_at) {
-      await finishRound(id, s.started_at) // finish the last round's leftovers before clearing its clock
+      await finishRound(id) // finish the last round's leftovers before clearing its clock
       fields.started_at = null
     }
     const update = db().from('exam_sessions').update(fields).eq('id', id)
@@ -130,16 +130,18 @@ export async function deleteSession(id: string) {
   redirect('/admin')
 }
 
-// Attempts reference question ids and option counts; changing questions under them would break grading.
-async function hasAttempts(sessionId: string) {
+// Attempts reference question ids and option counts; a started exam's clock also depends on the settings.
+async function isLocked(sessionId: string) {
   const { count, error } = await db().from('attempts').select('id', { count: 'exact', head: true }).eq('session_id', sessionId)
   if (error) throw error
-  return Boolean(count)
+  if (count) return true
+  const session: Pick<Session, 'started_at'> = must(await db().from('exam_sessions').select('started_at').eq('id', sessionId).single())
+  return session.started_at !== null
 }
-const LOCKED = 'Sudah ada peserta. Reset semua peserta dulu sebelum mengubah soal.'
+const LOCKED = 'Sudah ada peserta atau ujian sudah dimulai. Reset semua peserta dulu sebelum mengubah soal.'
 const TIMER_FIELDS = ['timer_mode', 'duration_sec', 'per_question_sec'] as const
 type TimerField = (typeof TIMER_FIELDS)[number]
-const TIMER_LOCKED = 'Pengaturan belum tersimpan — timer terkunci karena sudah ada peserta. Reset semua peserta dulu untuk mengubah timer.'
+const TIMER_LOCKED = 'Pengaturan belum tersimpan — timer terkunci karena sudah ada peserta atau ujian sudah dimulai. Reset semua peserta dulu untuk mengubah timer.'
 
 export async function uploadQuestions(id: string, formData: FormData) {
   await requireAdmin()
@@ -153,7 +155,7 @@ export async function uploadQuestions(id: string, formData: FormData) {
   const { questions, errors } = parseQuestionsCsv(new TextDecoder().decode(bytes))
   if (errors.length) return back(id, `Upload gagal — ${errors.slice(0, 5).join(' · ')}`)
   if (!questions.length) return back(id, 'File tidak berisi soal')
-  if (await hasAttempts(id)) return back(id, LOCKED)
+  if (await isLocked(id)) return back(id, LOCKED)
 
   must(await db().from('questions').delete().eq('session_id', id))
   must(await db().from('questions').insert(questions.map((q) => ({ ...q, session_id: id }))))
@@ -169,7 +171,7 @@ export async function saveQuestion(sessionId: string, questionId: string | null,
   }
   const q = toQuestion({ type: field('type'), text: field('question'), options: ['a', 'b', 'c', 'd', 'e'].map(field), answer: field('answer') })
   if (typeof q === 'string') return back(sessionId, `Soal belum tersimpan — ${q}`)
-  if (await hasAttempts(sessionId)) return back(sessionId, LOCKED)
+  if (await isLocked(sessionId)) return back(sessionId, LOCKED)
 
   if (questionId) {
     must(await db().from('questions').update(q).eq('id', questionId).eq('session_id', sessionId))
@@ -184,7 +186,7 @@ export async function saveQuestion(sessionId: string, questionId: string | null,
 
 export async function deleteQuestion(sessionId: string, questionId: string) {
   await requireAdmin()
-  if (await hasAttempts(sessionId)) return back(sessionId, LOCKED)
+  if (await isLocked(sessionId)) return back(sessionId, LOCKED)
   must(await db().from('questions').delete().eq('id', questionId).eq('session_id', sessionId))
   back(sessionId, 'Soal dihapus')
 }
@@ -197,7 +199,7 @@ export async function resetAttempt(sessionId: string, attemptId: string) {
 
 export async function resetAllAttempts(sessionId: string) {
   await requireAdmin()
-  must(await db().from('attempts').delete().eq('session_id', sessionId))
   must(await db().from('exam_sessions').update({ started_at: null, closes_at: null }).eq('id', sessionId)) // a fresh lobby
+  must(await db().from('attempts').delete().eq('session_id', sessionId))
   back(sessionId, 'Semua peserta direset')
 }
